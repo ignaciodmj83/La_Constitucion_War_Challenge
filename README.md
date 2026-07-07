@@ -2,10 +2,11 @@
 
 # ⚔️ La Constitución: WarChallenge
 
-**Aprende la Constitución Española de 1978 conquistando un mundo.**
+**Aprende la Constitución Española de 1978 conquistando un continente.**
 
-Un juego de estrategia tipo *Risk* donde cada uno de los 169 artículos es un
-territorio, cada título un continente y cada capítulo una isla.
+Un juego de estrategia tipo *Risk*, con mapa inspirado en Poniente, donde
+cada uno de los 169 artículos es un territorio y cada título una región —
+empezando siempre en el norte.
 
 [![CI](https://github.com/ignaciodmj83/La_Constitucion_War_Challenge/actions/workflows/ci.yml/badge.svg)](https://github.com/ignaciodmj83/La_Constitucion_War_Challenge/actions/workflows/ci.yml)
 [![Jugar online](https://img.shields.io/badge/▶_jugar-online-brightgreen)](https://la-constitucion-war-challenge.vercel.app/)
@@ -24,12 +25,15 @@ territorio, cada título un continente y cada capítulo una isla.
 
 ## ¿Qué es esto?
 
-La Constitución Española es aquí el mundo de **Constitucia**. Cada uno de los 11
-**títulos** es un continente; si el título tiene capítulos, es un **archipiélago**
-cuyas islas son los capítulos. Cada uno de los **169 artículos** es un **territorio**.
-El mapa es, a la vez, un mapa mental fiel de toda la Constitución.
+La Constitución Española es aquí **Constitucia**: un único continente alargado
+de norte a sur, inspirado en los mapas de fantasía tipo Poniente. Se empieza
+siempre en el norte, en **El Confín Helado**, y hay que conquistarlo todo hacia
+el sur. Cada uno de los 11 **títulos** es una región del continente (o una isla
+costera, en el caso de los dos últimos); si el título tiene capítulos, esa región
+se divide en comarcas separadas por un **río o una cordillera** — contiguas,
+nunca por mar. Cada uno de los **169 artículos** es un **territorio**.
 
-Primero te **preparas** con el profesor del continente, que te explica sus artículos
+Primero te **preparas** con el profesor de la región, que te explica sus artículos
 uno a uno con una escena visual y un truco para recordarlos; luego **conquistas**
 cada territorio respondiendo su pregunta. El mapa tiene **zoom y desplazamiento
 propios** para explorarlo de cerca.
@@ -53,7 +57,9 @@ preparación.
 
 ## Características
 
-- 🗺️ **Mapa mundial** con 8 continentes y 3 archipiélagos (capítulos = islas), rutas marítimas y **zoom/pan** propios.
+- 🗺️ **Continente único tipo Poniente**, siempre empezando en el norte; los títulos con
+  capítulos se dividen por **río o cordillera** (contiguos), y solo 2 islas costeras
+  necesitan barco. **Zoom y pan** propios del mapa.
 - 📜 **169 territorios = 169 artículos**, cada uno con explicación, escena visual
   mnemotécnica, truco de asociación y pregunta tipo test.
 - 🎓 **Modo preparación** con un profesor de personalidad propia por territorio.
@@ -93,9 +99,9 @@ La_Constitucion_War_Challenge/
 ├── js/
 │   ├── hierarchy.js    # estructura real: títulos → capítulos → artículos
 │   ├── map-data.js     # mundo generado (169 formas, centros y adyacencias)
-│   ├── data.js         # jerarquía + los 169 artículos (contenido)
+│   ├── data.js         # los 169 artículos: explicación, escena y pregunta
 │   └── game.js         # motor del juego (mapa, zoom, batallas, El Olvido)
-├── tools/gen-map.js    # generador del mundo (Voronoi jerárquico de 2 niveles)
+├── tools/gen-map.js    # generador del continente (silueta + Voronoi + río/cordillera)
 ├── scripts/            # servidor local y generador del bundle
 ├── tests/validate.js   # pruebas de integridad del contenido
 └── docs/ROADMAP.md     # hoja de ruta (incl. camino a la App Store)

@@ -1,115 +1,10 @@
 /* =========================================================================
-   LA CONSTITUCIÓN: WARCHALLENGE — datos del juego
+   LA CONSTITUCIÓN: WARCHALLENGE — banco de artículos
    Constitución Española de 1978 (BOE-A-1978-31229), 169 artículos.
-   TITULOS: estructura real (títulos → capítulos → artículos).
-   ARTICLES: los 169 artículos, indexados por número.
+   Los títulos/capítulos viven en hierarchy.js (cárgalo antes que este
+   archivo). ARTICLES: los 169 artículos, indexados por número.
    ========================================================================= */
 
-/* =========================================================================
-   Estructura real de la Constitución Española de 1978.
-   Títulos = continentes.  Si un título tiene capítulos, es un ARCHIPIÉLAGO
-   cuyas islas son los capítulos.  Cada artículo es un TERRITORIO (169 en total).
-   Cada continente tiene un color y una temática únicos.
-   `arts` es [desde, hasta] (rango inclusivo de números de artículo).
-   ========================================================================= */
-
-const TITULOS = [
-  {
-    id: 'preliminar', roman: '', name: 'Título Preliminar',
-    theme: 'Las Tierras Fundacionales', color: '#e0a52e', start: true,
-    faction: { name: 'Los Fundadores', unit: '🏛️' },
-    prof: { emoji: '👵', name: 'Doña Carta Magna', motto: 'Yo estuve allí en el 78. Aquí empieza todo, criatura.' },
-    islands: [{ id: 'preliminar', name: 'Tierras Fundacionales', arts: [1, 9] }],
-  },
-  {
-    id: 't1', roman: 'I', name: 'Derechos y Deberes Fundamentales',
-    theme: 'El Archipiélago de las Libertades', color: '#2f9e5f',
-    faction: { name: 'Guardianes de la Libertad', unit: '🕊️' },
-    prof: { emoji: '🦅', name: 'Libertas, la Centinela', motto: 'Cuarenta y seis islas de derechos custodio. Son el corazón de todo.' },
-    islands: [
-      { id: 't1_portico', name: 'Pórtico · La Dignidad', arts: [10, 10] },
-      { id: 't1_c1', name: 'Cap. I · Españoles y extranjeros', arts: [11, 13] },
-      { id: 't1_c2', name: 'Cap. II · Derechos y libertades', arts: [14, 38] },
-      { id: 't1_c3', name: 'Cap. III · Principios rectores', arts: [39, 52] },
-      { id: 't1_c4', name: 'Cap. IV · Garantías', arts: [53, 54] },
-      { id: 't1_c5', name: 'Cap. V · Suspensión', arts: [55, 55] },
-    ],
-  },
-  {
-    id: 't2', roman: 'II', name: 'La Corona',
-    theme: 'El Reino de la Corona', color: '#7a4fbf',
-    faction: { name: 'La Guardia Real', unit: '💂' },
-    prof: { emoji: '🎩', name: 'El Cronista Real', motto: 'Palacio guarda mil secretos y yo los apunto todos.' },
-    islands: [{ id: 't2', name: 'El Reino', arts: [56, 65] }],
-  },
-  {
-    id: 't3', roman: 'III', name: 'Las Cortes Generales',
-    theme: 'El Archipiélago de las Cámaras', color: '#4d92e0',
-    faction: { name: 'Los Dos Hemiciclos', unit: '🪶' },
-    prof: { emoji: '🧑‍🏫', name: 'El Letrado Mayor', motto: 'Tres islas legislativas. Sin mí, aquí te pierdes.' },
-    islands: [
-      { id: 't3_c1', name: 'Cap. I · De las Cámaras', arts: [66, 80] },
-      { id: 't3_c2', name: 'Cap. II · Elaboración de las leyes', arts: [81, 92] },
-      { id: 't3_c3', name: 'Cap. III · Tratados internacionales', arts: [93, 96] },
-    ],
-  },
-  {
-    id: 't4', roman: 'IV', name: 'Gobierno y Administración',
-    theme: 'Las Tierras del Ejecutivo', color: '#e0742f',
-    faction: { name: 'El Consejo de Ministros', unit: '🧑‍💼' },
-    prof: { emoji: '👩‍💼', name: 'La Subsecretaria', motto: 'Aquí se gobierna de verdad. Firma aquí y te lo explico.' },
-    islands: [{ id: 't4', name: 'El Ejecutivo', arts: [97, 107] }],
-  },
-  {
-    id: 't5', roman: 'V', name: 'Relaciones Gobierno–Cortes',
-    theme: 'El Istmo de los Controles', color: '#23a58f',
-    faction: { name: 'Duelistas de la Censura', unit: '🤺' },
-    prof: { emoji: '🧔', name: 'El Maestro de Duelos', motto: 'Censura, confianza, disolución: esgrima parlamentaria pura.' },
-    islands: [{ id: 't5', name: 'El Istmo', arts: [108, 116] }],
-  },
-  {
-    id: 't6', roman: 'VI', name: 'El Poder Judicial',
-    theme: 'Las Tierras de la Toga', color: '#d24b3e',
-    faction: { name: 'Los Togados', unit: '👩‍⚖️' },
-    prof: { emoji: '👵🏻', name: 'La Magistrada Emérita', motto: 'Cuarenta años dictando sentencias. Silencio y toma apuntes.' },
-    islands: [{ id: 't6', name: 'La Toga', arts: [117, 127] }],
-  },
-  {
-    id: 't7', roman: 'VII', name: 'Economía y Hacienda',
-    theme: 'Las Minas del Tesoro', color: '#9c7a1e',
-    faction: { name: 'Mercaderes del Tesoro', unit: '🪙' },
-    prof: { emoji: '🤑', name: 'El Tesorero de la Villa', motto: '¿Quién paga todo esto? Ven, que te enseño el oro del reino.' },
-    islands: [{ id: 't7', name: 'El Tesoro', arts: [128, 136] }],
-  },
-  {
-    id: 't8', roman: 'VIII', name: 'Organización Territorial',
-    theme: 'El Archipiélago de las Autonomías', color: '#86ac3c',
-    faction: { name: 'La Confederación de Municipios', unit: '🏘️' },
-    prof: { emoji: '🧭', name: 'La Cartógrafa', motto: 'Municipios, provincias, autonomías: yo dibujé este mapa.' },
-    islands: [
-      { id: 't8_c1', name: 'Cap. I · Principios generales', arts: [137, 139] },
-      { id: 't8_c2', name: 'Cap. II · Administración Local', arts: [140, 142] },
-      { id: 't8_c3', name: 'Cap. III · Comunidades Autónomas', arts: [143, 158] },
-    ],
-  },
-  {
-    id: 't9', roman: 'IX', name: 'Tribunal Constitucional',
-    theme: 'La Isla del Guardián', color: '#c43a6e', island: true,
-    faction: { name: 'Los Doce Sabios', unit: '🧙' },
-    prof: { emoji: '🧙‍♂️', name: 'El Duodécimo Sabio', motto: 'En esta isla vigilamos la Constitución entera.' },
-    islands: [{ id: 't9', name: 'El Guardián', arts: [159, 165] }],
-  },
-  {
-    id: 't10', roman: 'X', name: 'Reforma Constitucional',
-    theme: 'La Isla de la Llave', color: '#8a93a8', island: true,
-    faction: { name: 'Ingenieros de la Carta', unit: '🔧' },
-    prof: { emoji: '👷‍♀️', name: 'La Ingeniera Constituyente', motto: '¿Cambiar la Constitución? Se puede… si giras las llaves correctas.' },
-    islands: [{ id: 't10', name: 'La Llave', arts: [166, 169] }],
-  },
-];
-
-
-/* 169 artículos de la CE 1978, indexados por número. Generado. */
 const ARTICLES = {
   1: {"t":"Estado, valores y Monarquía","e":"España es un Estado social y democrático de Derecho. Sus valores superiores: libertad, justicia, igualdad y pluralismo político. La soberanía reside en el pueblo español y la forma política es la Monarquía parlamentaria.","img":["🇪🇸","💎","👥"],"mn":"Cuatro joyas 💎 sostienen el trono del pueblo: Libertad, Justicia, Igualdad y Pluralismo (LiJIP).","q":"¿Cuáles son los valores superiores del ordenamiento jurídico?","o":["Libertad, justicia, igualdad y pluralismo político","Libertad, democracia, paz y progreso","Justicia, seguridad, unidad y solidaridad","Igualdad, fraternidad, legalidad y soberanía"],"c":0},
   2: {"t":"Unidad y autonomía","e":"La Constitución se fundamenta en la indisoluble unidad de la Nación española, y a la vez reconoce y garantiza el derecho a la autonomía de las nacionalidades y regiones y la solidaridad entre ellas.","img":["🧩","🤝","🇪🇸"],"mn":"Un puzle 🧩 de una sola imagen: piezas con vida propia, cuadro imposible de separar.","q":"Según el art. 2, la Constitución se fundamenta en…","o":["La indisoluble unidad de la Nación española","El pacto entre las Comunidades Autónomas","La voluntad de las Cortes constituyentes","El principio de subsidiariedad"],"c":0},
@@ -282,4 +177,6 @@ const ARTICLES = {
   169: {"t":"Límite temporal","e":"No podrá iniciarse la reforma constitucional en tiempo de guerra o de vigencia de alguno de los estados de alarma, excepción o sitio del art. 116.","img":["⚔️","🚨","🚫"],"mn":"Con el país en guerra ⚔️ o en emergencia 🚨, la Constitución se congela: no se reforma.","q":"¿Cuándo NO podrá iniciarse la reforma constitucional?","o":["En tiempo de guerra o vigencia de los estados de alarma, excepción o sitio","Durante el primer año de cada legislatura","En periodo electoral","Mientras se tramitan los Presupuestos"],"c":0},
 };
 
-if (typeof module !== "undefined") module.exports = { TITULOS, ARTICLES };
+
+
+if (typeof module !== "undefined") module.exports = { ARTICLES };

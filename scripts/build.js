@@ -15,7 +15,7 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 let html = read('index.html');
 const css = read('css/game.css');
-const js = ['js/map-data.js', 'js/data.js', 'js/game.js'].map(read).join('\n\n');
+const js = ['js/map-data.js', 'js/hierarchy.js', 'js/data.js', 'js/game.js'].map(read).join('\n\n');
 
 // Sustituir la hoja de estilos externa por un bloque <style> en línea
 html = html.replace(/<link[^>]+game\.css[^>]*>/, `<style>\n${css}\n</style>`);

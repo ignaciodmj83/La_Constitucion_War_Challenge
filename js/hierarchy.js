@@ -1,24 +1,29 @@
 /* =========================================================================
    Estructura real de la Constitución Española de 1978.
-   Títulos = continentes.  Si un título tiene capítulos, es un ARCHIPIÉLAGO
-   cuyas islas son los capítulos.  Cada artículo es un TERRITORIO (169 en total).
-   Cada continente tiene un color y una temática únicos.
+   El mundo "Constitucia" es UN SOLO CONTINENTE alargado de norte a sur.
+   Cada título es una REGIÓN del continente (nunca una isla, salvo IX y X,
+   que son islas costeras). Si un título tiene capítulos, esa región se
+   divide internamente en BANDAS DE CAPÍTULO separadas por un accidente
+   geográfico (río o cordillera) — contiguas, no separadas por mar.
+   Cada artículo es un TERRITORIO (169 en total). Se empieza siempre en
+   El Confín Helado, en el extremo norte.
    `arts` es [desde, hasta] (rango inclusivo de números de artículo).
    ========================================================================= */
 
 const TITULOS = [
   {
     id: 'preliminar', roman: '', name: 'Título Preliminar',
-    theme: 'Las Tierras Fundacionales', color: '#e0a52e', start: true,
+    theme: 'El Confín Helado', color: '#e0a52e', start: true,
     faction: { name: 'Los Fundadores', unit: '🏛️' },
-    prof: { emoji: '👵', name: 'Doña Carta Magna', motto: 'Yo estuve allí en el 78. Aquí empieza todo, criatura.' },
-    islands: [{ id: 'preliminar', name: 'Tierras Fundacionales', arts: [1, 9] }],
+    prof: { emoji: '👵', name: 'Doña Carta Magna', motto: 'Yo estuve allí en el 78. Aquí, en el norte, empieza todo, criatura.' },
+    islands: [{ id: 'preliminar', name: 'El Confín Helado', arts: [1, 9] }],
   },
   {
     id: 't1', roman: 'I', name: 'Derechos y Deberes Fundamentales',
-    theme: 'El Archipiélago de las Libertades', color: '#2f9e5f',
+    theme: 'Las Tierras de la Libertad', color: '#2f9e5f',
     faction: { name: 'Guardianes de la Libertad', unit: '🕊️' },
-    prof: { emoji: '🦅', name: 'Libertas, la Centinela', motto: 'Cuarenta y seis islas de derechos custodio. Son el corazón de todo.' },
+    prof: { emoji: '🦅', name: 'Libertas, la Centinela', motto: 'Cuarenta y seis comarcas de derechos custodio. Son el corazón de todo.' },
+    chapterDivider: 'river', dividerName: 'El Río de las Libertades',
     islands: [
       { id: 't1_portico', name: 'Pórtico · La Dignidad', arts: [10, 10] },
       { id: 't1_c1', name: 'Cap. I · Españoles y extranjeros', arts: [11, 13] },
@@ -37,9 +42,10 @@ const TITULOS = [
   },
   {
     id: 't3', roman: 'III', name: 'Las Cortes Generales',
-    theme: 'El Archipiélago de las Cámaras', color: '#4d92e0',
+    theme: 'Las Tierras de las Cámaras', color: '#4d92e0',
     faction: { name: 'Los Dos Hemiciclos', unit: '🪶' },
-    prof: { emoji: '🧑‍🏫', name: 'El Letrado Mayor', motto: 'Tres islas legislativas. Sin mí, aquí te pierdes.' },
+    prof: { emoji: '🧑‍🏫', name: 'El Letrado Mayor', motto: 'Tres comarcas legislativas, separadas por la Cordillera. Sin mí, aquí te pierdes.' },
+    chapterDivider: 'mountains', dividerName: 'La Cordillera de las Cámaras',
     islands: [
       { id: 't3_c1', name: 'Cap. I · De las Cámaras', arts: [66, 80] },
       { id: 't3_c2', name: 'Cap. II · Elaboración de las leyes', arts: [81, 92] },
@@ -76,9 +82,10 @@ const TITULOS = [
   },
   {
     id: 't8', roman: 'VIII', name: 'Organización Territorial',
-    theme: 'El Archipiélago de las Autonomías', color: '#86ac3c',
+    theme: 'Las Tierras de las Autonomías', color: '#86ac3c',
     faction: { name: 'La Confederación de Municipios', unit: '🏘️' },
-    prof: { emoji: '🧭', name: 'La Cartógrafa', motto: 'Municipios, provincias, autonomías: yo dibujé este mapa.' },
+    prof: { emoji: '🧭', name: 'La Cartógrafa', motto: 'Municipios, provincias, autonomías: tres comarcas separadas por el Río. Yo dibujé este mapa.' },
+    chapterDivider: 'river', dividerName: 'El Río de las Autonomías',
     islands: [
       { id: 't8_c1', name: 'Cap. I · Principios generales', arts: [137, 139] },
       { id: 't8_c2', name: 'Cap. II · Administración Local', arts: [140, 142] },
@@ -89,7 +96,7 @@ const TITULOS = [
     id: 't9', roman: 'IX', name: 'Tribunal Constitucional',
     theme: 'La Isla del Guardián', color: '#c43a6e', island: true,
     faction: { name: 'Los Doce Sabios', unit: '🧙' },
-    prof: { emoji: '🧙‍♂️', name: 'El Duodécimo Sabio', motto: 'En esta isla vigilamos la Constitución entera.' },
+    prof: { emoji: '🧙‍♂️', name: 'El Duodécimo Sabio', motto: 'En esta isla vigilamos la Constitución entera. Pocos llegan hasta aquí.' },
     islands: [{ id: 't9', name: 'El Guardián', arts: [159, 165] }],
   },
   {

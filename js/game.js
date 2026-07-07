@@ -1,7 +1,7 @@
 /* =========================================================================
    LA CONSTITUCIÓN: WARCHALLENGE — motor del juego
    Mundo "Constitucia" tipo Risk sobre la CE de 1978.
-   - Continentes = títulos; archipiélagos = títulos con capítulos (islas).
+   - Continente único; los títulos con capítulos se dividen por río/cordillera.
    - 169 TERRITORIOS = 169 artículos. Se conquista un territorio respondiendo
      su pregunta. Modo preparación con un profesor por título.
    - Mapa con zoom/pan propio (no afecta a la página).
@@ -36,7 +36,7 @@ const ACHIEVEMENTS = [
   { id: 'combo20', icon: '☄️', name: 'Fuerza imparable',       desc: 'Encadena 20 aciertos seguidos.', pts: 1200 },
   { id: 'flash',   icon: '⚡', name: 'Reflejos de jurista',    desc: 'Acierta una pregunta en menos de 4 segundos.', pts: 200 },
   { id: 'cont1',   icon: '🏛️', name: 'Primer continente',      desc: 'Conquista un título entero.', pts: 500 },
-  { id: 'archi',   icon: '⛵', name: 'Señor de los mares',      desc: 'Conquista un archipiélago completo (título con capítulos).', pts: 800 },
+  { id: 'archi',   icon: '🏞️', name: 'Cruza fronteras',         desc: 'Conquista un título completo dividido por río o cordillera.', pts: 800 },
   { id: 'derechos', icon: '🕊️', name: 'Guardián de derechos',  desc: 'Conquista el Título I completo (46 artículos).', pts: 1500 },
   { id: 'defender', icon: '🛡️', name: 'Defensor del Pueblo',   desc: 'Defiende con éxito un título de El Olvido.', pts: 400 },
   { id: 'sabio',   icon: '🦉', name: 'Constitucionalista',     desc: 'Responde correctamente 169 preguntas.', pts: 1500 },
@@ -184,7 +184,10 @@ function buildMap() {
     </radialGradient>
     <filter id="landSh" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#000" flood-opacity="0.45"/>
-    </filter>`;
+    </filter>
+    <marker id="mtnPeak" viewBox="0 0 10 10" refX="5" refY="7" markerWidth="8" markerHeight="8" orient="0">
+      <polygon points="5,1 9,9 1,9" fill="#efe6d0" stroke="#7a7360" stroke-width="0.6"/>
+    </marker>`;
   svg.appendChild(defs);
   svg.appendChild(svgEl('rect', { x: -2000, y: -2000, width: WORLD.w + 4000, height: WORLD.h + 4000, fill: 'url(#sea)' }));
 
@@ -222,6 +225,17 @@ function buildMap() {
     terr.appendChild(g);
   }
   svg.appendChild(terr);
+
+  // fronteras internas de capítulo: río o cordillera (contiguas, no separan por mar)
+  const dividers = svgEl('g', { id: 'dividers' });
+  for (const cb of (MAP.chapterBorders || [])) {
+    if (cb.style === 'river') {
+      dividers.appendChild(svgEl('path', { d: cb.path, class: 'chapter-river', title: cb.name }));
+    } else {
+      dividers.appendChild(svgEl('path', { d: cb.path, class: 'chapter-mountains', 'marker-mid': 'url(#mtnPeak)', title: cb.name }));
+    }
+  }
+  svg.appendChild(dividers);
 
   // etiquetas de continente (nombre del título + guarnición de facción) por isla
   const labels = svgEl('g', { id: 'labels' });
@@ -357,10 +371,11 @@ function renderLegend() {
     const arts = artsOfTitulo(t.id); const owned = arts.filter((n) => S.owned[n]).length;
     const done = owned === arts.length;
     const bes = arts.some((n) => S.owned[n]) && memoryOf(t.id) < MEMORY_DANGER;
-    return `<button class="leg-row ${done ? 'done' : ''}" data-tid="${t.id}" title="${t.theme}${t.islands.length > 1 ? ' (archipiélago)' : ''}">
+    const divIcon = t.island ? '🏝️' : t.chapterDivider === 'river' ? '🌊' : t.chapterDivider === 'mountains' ? '⛰️' : '';
+    return `<button class="leg-row ${done ? 'done' : ''}" data-tid="${t.id}" title="${t.theme}${t.chapterDivider ? ` (dividido por ${t.dividerName})` : ''}">
       <span class="leg-dot" style="background:${t.color}"></span>
       <span class="leg-name">${t.roman ? t.roman + '. ' : ''}${t.name}</span>
-      <span class="leg-prog">${t.islands.length > 1 ? '🏝️ ' : ''}${bes ? '🌫️ ' : ''}${owned}/${arts.length}${done ? ' ✓' : ''}</span>
+      <span class="leg-prog">${divIcon ? divIcon + ' ' : ''}${bes ? '🌫️ ' : ''}${owned}/${arts.length}${done ? ' ✓' : ''}</span>
     </button>`;
   }).join('');
   box.querySelectorAll('.leg-row').forEach((b) => b.addEventListener('click', () => {

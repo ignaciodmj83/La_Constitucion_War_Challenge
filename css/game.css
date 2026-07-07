@@ -73,6 +73,21 @@ body {
 .sea-route.owned { stroke: #5fd0a0; opacity: .45; }
 @keyframes routeFlow { to { stroke-dashoffset: -20; } }
 
+/* fronteras internas de capítulo: separan un pelín, sin cortar el paso */
+.chapter-river {
+  fill: none; stroke: #5fc7e0; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 3 5; opacity: .8; animation: riverFlow 2.2s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(95,199,224,.5));
+  pointer-events: none;
+}
+@keyframes riverFlow { to { stroke-dashoffset: -16; } }
+.chapter-mountains {
+  fill: none; stroke: #7a7360; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1 13; opacity: .85;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.5));
+  pointer-events: none;
+}
+
 /* ── Controles de zoom ── */
 #zoomControls { position: absolute; right: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 6px; z-index: 8; }
 #zoomControls button { width: 42px; height: 42px; border-radius: 11px; border: 1px solid var(--line);

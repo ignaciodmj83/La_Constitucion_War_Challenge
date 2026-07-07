@@ -13,10 +13,10 @@ const vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-// Cargar map-data.js + data.js como un único script (para compartir ámbito)
+// Cargar map-data.js + hierarchy.js + data.js como un único script (comparten ámbito)
 const sandbox = {};
 vm.createContext(sandbox);
-const source = read('js/map-data.js') + '\n' + read('js/data.js') +
+const source = read('js/map-data.js') + '\n' + read('js/hierarchy.js') + '\n' + read('js/data.js') +
   '\n;globalThis.__g = { MAP, TITULOS, ARTICLES };';
 vm.runInContext(source, sandbox, { filename: 'game-data.js' });
 const { MAP, TITULOS, ARTICLES } = sandbox.__g;
@@ -78,5 +78,5 @@ if (errors.length) {
   console.error('✗ Validación FALLIDA:\n' + errors.map((e) => '  - ' + e).join('\n'));
   process.exit(1);
 }
-const conts = TITULOS.length, archi = TITULOS.filter((t) => t.islands.length > 1).length;
-console.log(`✓ Validación correcta — ${conts} títulos (${archi} archipiélagos), 169 artículos/territorios, mapa conexo y adyacencias simétricas.`);
+const conts = TITULOS.length, divididos = TITULOS.filter((t) => t.islands.length > 1).length, islas = TITULOS.filter((t) => t.island).length;
+console.log(`✓ Validación correcta — ${conts} títulos (${divididos} divididos por río/cordillera, ${islas} islas), 169 artículos/territorios, mundo conexo y adyacencias simétricas.`);

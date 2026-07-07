@@ -4,6 +4,26 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.1.0] — 2026-07-07
+
+### Cambiado (mapa inspirado en Poniente)
+- El mundo pasa de "títulos con archipiélagos de islas" a un **único continente**
+  alargado de norte a sur, con silueta orgánica (norte frío y estrecho → cuello
+  → tierras anchas → península sur), inspirado en los mapas de fantasía tipo
+  Poniente.
+- **Se empieza siempre en el norte**, en una región propia ("El Confín Helado",
+  nombre original para evitar cualquier choque de marca).
+- Los títulos con capítulos (I, III, VIII) ya **no son archipiélagos de islas
+  en el mar**: ahora son una sola región dividida internamente por un **río o
+  una cordillera** (renderizados como frontera decorativa animada), separadas
+  "un pelín" pero siempre contiguas por tierra.
+- Solo el Tribunal Constitucional y la Reforma Constitucional siguen siendo
+  **islas** de verdad, con un estrecho de mar garantizado frente a la costa y
+  su propia ruta marítima.
+- Refactor interno: `js/hierarchy.js` deja de duplicarse dentro de `js/data.js`
+  (bug que causaba que los cambios de la jerarquía no se aplicaran); ahora se
+  carga como script independiente y es la única fuente de verdad.
+
 ## [2.0.0] — 2026-07-07
 
 ### Cambiado (rediseño del mapa)
