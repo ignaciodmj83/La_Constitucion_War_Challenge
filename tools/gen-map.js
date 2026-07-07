@@ -1,22 +1,30 @@
 /* =========================================================================
-   Generador del mundo "Constitucia" — continente único inspirado en un
-   mapa de fantasía tipo Poniente: alargado de norte a sur, empezando
-   siempre en el norte (El Confín Helado) y expandiéndose hacia el sur.
+   Generador del mundo "Constitucia" — DOS CONTINENTES separados por un mar,
+   inspirados en mapas de fantasía tipo Poniente/Essos:
+     - "home" (más pequeño): Preliminar + Título I + Título II. Aquí se
+       empieza siempre, en el norte (El Confín Helado).
+     - "far" (más grande): Títulos III a VIII. Se llega cruzando el mar
+       por una ruta marítima obligatoria.
+     - 2 islas costeras (Títulos IX y X) frente a la costa de "far".
 
    Niveles de generación:
-   1. Silueta del continente (norte estrecho y frío → cuello → tierras
-      anchas → península sur), más 2 islas costeras (Títulos IX y X).
-   2. Cada TÍTULO es una REGIÓN del continente (Voronoi ponderado por
-      número de artículos, semillas colocadas de norte a sur).
-   3. Si un título tiene capítulos, su región se divide en BANDAS DE
-      CAPÍTULO (reparto tipo treemap a lo largo del eje dominante),
-      separadas por un río o cordillera — contiguas, no por mar.
-   4. Cada banda (o región simple) se subdivide en un TERRITORIO por
-      artículo (Voronoi ponderado + relajación de Lloyd).
+   1. Silueta de cada continente (perfil de anchura norte→sur propio),
+      con costa orgánica (jitter + ondas de bahía, no solo ruido).
+   2. Cada TÍTULO es una REGIÓN de su continente (Voronoi ponderado por
+      número de artículos, semillas colocadas de norte a sur, restringido
+      a las celdas del continente al que pertenece).
+   3. Si un título tiene capítulos, su región se divide en COMARCAS
+      separadas por una curva orgánica (río: meandro suave; cordillera:
+      quiebros más bruscos) — la curva se genera primero y se usa
+      DIRECTAMENTE tanto para clasificar celdas como para dibujar la
+      frontera decorativa, así es orgánica por construcción.
+   4. Cada comarca se subdivide en un TERRITORIO por artículo (Voronoi
+      ponderado + relajación de Lloyd).
 
    Produce js/map-data.js con: paths y centros de los 169 territorios,
-   metadatos de título/capítulo, adyacencias, rutas marítimas (solo hacia
-   las 2 islas) y las fronteras decorativas río/cordillera entre capítulos.
+   metadatos de título/capítulo, adyacencias, rutas marítimas (cruce
+   obligatorio entre continentes + hacia las 2 islas) y las fronteras
+   decorativas río/cordillera entre capítulos.
    Uso: npm run map
    ========================================================================= */
 'use strict';
@@ -24,11 +32,10 @@ const fs = require('fs');
 const path = require('path');
 const { TITULOS } = require('../js/hierarchy.js');
 
-const W = 1750, H = 1900, STEP = 3;
+const W = 2300, H = 1900, STEP = 3;
 const nx = Math.floor(W / STEP), ny = Math.floor(H / STEP);
 const cx = (i) => i * STEP + STEP / 2;
 const cy = (j) => j * STEP + STEP / 2;
-const CENTER_X = W / 2;
 
 /* ── utilidades ── */
 function mulberry(seed) {
@@ -77,99 +84,124 @@ function dp(pts, tol) {
   return pts.filter((_, i) => keep[i]);
 }
 const toPath = (pts) => 'M' + pts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join('L') + 'Z';
-
-/* ═══════════════ 1. Silueta del continente ═══════════════ */
-/* Perfil de anchura por fracción de altura (norte fino y frío → cuello
-   → tierras anchas → sur que se afila en península). */
-const PROFILE = [
-  [0.00, 0.09, 0.00], [0.05, 0.23, 0.00], [0.14, 0.33, 0.02], [0.26, 0.29, 0.04],
-  [0.34, 0.13, 0.02], [0.40, 0.15, 0.00], [0.50, 0.35, -0.03], [0.62, 0.39, 0.02],
-  [0.72, 0.33, 0.00], [0.82, 0.23, -0.02], [0.90, 0.13, 0.01], [0.97, 0.05, 0.00], [1.00, 0.02, 0.00],
-];
-function interpProfile(t) {
-  for (let i = 0; i < PROFILE.length - 1; i++) {
-    const [t0, hw0, sw0] = PROFILE[i], [t1, hw1, sw1] = PROFILE[i + 1];
-    if (t >= t0 && t <= t1) {
-      const f = (t - t0) / (t1 - t0 || 1);
-      const s = f * f * (3 - 2 * f); // smoothstep
-      return [hw0 + (hw1 - hw0) * s, sw0 + (sw1 - sw0) * s];
-    }
+function bboxOfMask(mask) {
+  let i0 = nx, i1 = -1, j0 = ny, j1 = -1;
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    if (!mask[j * nx + i]) continue;
+    if (i < i0) i0 = i; if (i > i1) i1 = i; if (j < j0) j0 = j; if (j > j1) j1 = j;
   }
-  return [PROFILE[PROFILE.length - 1][1], PROFILE[PROFILE.length - 1][2]];
+  return { i0, i1, j0, j1 };
 }
-const rndCoast = mulberry(20260707);
-function buildContinentPolygon() {
-  const steps = 60, left = [], right = [];
+
+/* ═══════════════ 1. Siluetas de los dos continentes ═══════════════ */
+function makeInterp(profile) {
+  return (t) => {
+    for (let i = 0; i < profile.length - 1; i++) {
+      const [t0, hw0, sw0] = profile[i], [t1, hw1, sw1] = profile[i + 1];
+      if (t >= t0 && t <= t1) {
+        const f = (t - t0) / (t1 - t0 || 1);
+        const s = f * f * (3 - 2 * f); // smoothstep
+        return [hw0 + (hw1 - hw0) * s, sw0 + (sw1 - sw0) * s];
+      }
+    }
+    return [profile[profile.length - 1][1], profile[profile.length - 1][2]];
+  };
+}
+/* "home": norte frío y estrecho → cuello → tierras anchas (Título I) →
+   península sur (La Corona). Inspirado en Poniente. */
+const PROFILE_HOME = [
+  [0.00, 0.10, 0.00], [0.05, 0.24, 0.00], [0.13, 0.34, 0.03], [0.24, 0.30, 0.05],
+  [0.33, 0.14, 0.02], [0.40, 0.17, 0.00], [0.52, 0.33, -0.03], [0.66, 0.36, 0.02],
+  [0.78, 0.27, -0.02], [0.90, 0.15, 0.01], [0.97, 0.06, 0.00], [1.00, 0.02, 0.00],
+];
+/* "far": más ancho y sinuoso, con varios abultamientos y bahías —
+   deliberadamente distinto del "home", inspirado en Essos. */
+const PROFILE_FAR = [
+  [0.00, 0.14, 0.10], [0.06, 0.26, -0.06], [0.14, 0.20, -0.14], [0.22, 0.32, -0.02],
+  [0.32, 0.40, 0.06], [0.42, 0.34, -0.04], [0.50, 0.41, 0.02], [0.60, 0.36, 0.10],
+  [0.70, 0.30, 0.02], [0.80, 0.34, -0.06], [0.90, 0.20, 0.00], [0.97, 0.09, 0.02], [1.00, 0.03, 0.00],
+];
+const HOME_CFG = { id: 'home', cx: 520, refW: 740, profile: PROFILE_HOME, seed: 20260707, jitterAmp: 0.026 };
+const FAR_CFG = { id: 'far', cx: 1650, refW: 980, profile: PROFILE_FAR, seed: 20260808, jitterAmp: 0.03 };
+
+function buildContinentPolygon(cfg) {
+  const interp = makeInterp(cfg.profile);
+  const rnd = mulberry(cfg.seed);
+  const steps = 80, left = [], right = [];
+  const w1f = 2 + rnd() * 1.5, w1p = rnd() * Math.PI * 2;
+  const w2f = 5 + rnd() * 2.5, w2p = rnd() * Math.PI * 2;
   for (let i = 0; i <= steps; i++) {
     const t = i / steps, y = t * H;
-    const [hwF, swF] = interpProfile(t);
-    const jitter = (rndCoast() - 0.5) * 0.018 * W;
-    const spineX = CENTER_X + swF * W;
-    left.push([spineX - hwF * W + jitter, y]);
-    right.push([spineX + hwF * W - jitter, y]);
+    const [hwF, swF] = interp(t);
+    const wob = Math.sin(t * Math.PI * 2 * w1f + w1p) * 0.05 + Math.sin(t * Math.PI * 2 * w2f + w2p) * 0.022;
+    const jitterL = (rnd() - 0.5) * cfg.jitterAmp;
+    const jitterR = (rnd() - 0.5) * cfg.jitterAmp;
+    const spineX = cfg.cx + swF * cfg.refW;
+    const hw = Math.max(0.02, hwF + wob) * cfg.refW;
+    left.push([spineX - hw + jitterL * cfg.refW, y]);
+    right.push([spineX + hw - jitterR * cfg.refW, y]);
   }
   let poly = left.concat(right.reverse());
   poly = chaikin(chaikin(poly)); poly = dp(poly, 1.2);
   return poly;
 }
-const CONTINENT = buildContinentPolygon();
-
-/* rasterizar el continente en la rejilla */
-const onContinent = new Uint8Array(nx * ny);
-let continentCells = 0;
-{
-  // bbox rápido por fila para no probar inPoly en toda la rejilla
-  for (let j = 0; j < ny; j++) {
-    const y = cy(j);
-    for (let i = 0; i < nx; i++) {
-      if (inPoly(cx(i), y, CONTINENT)) { onContinent[j * nx + i] = 1; continentCells++; }
-    }
-  }
+function rasterizePoly(poly) {
+  const mask = new Uint8Array(nx * ny); let count = 0;
+  let minX = W, maxX = 0, minY = H, maxY = 0;
+  for (const [x, y] of poly) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+  const i0 = Math.max(0, Math.floor(minX / STEP)), i1 = Math.min(nx - 1, Math.ceil(maxX / STEP));
+  const j0 = Math.max(0, Math.floor(minY / STEP)), j1 = Math.min(ny - 1, Math.ceil(maxY / STEP));
+  for (let j = j0; j <= j1; j++) { const y = cy(j); for (let i = i0; i <= i1; i++) { if (inPoly(cx(i), y, poly)) { mask[j * nx + i] = 1; count++; } } }
+  return { mask, count };
 }
+const HOME_POLY = buildContinentPolygon(HOME_CFG);
+const FAR_POLY = buildContinentPolygon(FAR_CFG);
+const HOME = rasterizePoly(HOME_POLY);
+const FAR = rasterizePoly(FAR_POLY);
+const onLand = new Uint8Array(nx * ny);
+for (let idx = 0; idx < nx * ny; idx++) onLand[idx] = (HOME.mask[idx] || FAR.mask[idx]) ? 1 : 0;
 
-/* ═══════════════ 2. Regiones (títulos) por Voronoi ponderado ═══════════════ */
-const MAINLAND_TITULOS = TITULOS.filter((t) => !t.island);
+/* ═══════════════ 2. Regiones (títulos) por Voronoi ponderado, por continente ═══════════════ */
+const HOME_TITULOS = TITULOS.filter((t) => t.continent === 'home' && !t.island);
+const FAR_MAINLAND_TITULOS = TITULOS.filter((t) => t.continent === 'far' && !t.island);
+const MAINLAND_TITULOS = HOME_TITULOS.concat(FAR_MAINLAND_TITULOS);
 const ISLAND_TITULOS = TITULOS.filter((t) => t.island);
 
-const mainlandArts = {}; let totalMainlandArts = 0;
-for (const t of MAINLAND_TITULOS) { const n = t.islands.reduce((s, is) => s + (is.arts[1] - is.arts[0] + 1), 0); mainlandArts[t.id] = n; totalMainlandArts += n; }
-const UNIT = (continentCells * STEP * STEP) / totalMainlandArts; // px² por artículo, escala automática
+const TITULO_IDS = MAINLAND_TITULOS.map((t) => t.id);
+const idIndex = {}; TITULO_IDS.forEach((id, k) => { idIndex[id] = k; });
+const tituloLabel = new Int16Array(nx * ny).fill(-1);
 
-/* semillas de norte a sur (fracción de H) con desplazamiento respecto al eje (fracción de W) */
-const SEEDS_FRAC = {
-  preliminar: [0.05, 0.00],
-  t2:         [0.17, 0.17],
-  t1:         [0.25, -0.15],
-  t3:         [0.46, 0.02],
-  t5:         [0.55, 0.21],
-  t4:         [0.63, 0.16],
-  t6:         [0.71, 0.11],
-  t7:         [0.66, -0.19],
-  t8:         [0.87, 0.00],
-};
-function seedPixel(tid) {
-  const [yf, xoff] = SEEDS_FRAC[tid];
-  const [, swF] = interpProfile(yf);
-  return [CENTER_X + swF * W + xoff * W, yf * H];
+function artCountOf(t) { return t.islands.reduce((s, is) => s + (is.arts[1] - is.arts[0] + 1), 0); }
+
+const SEEDS_FRAC_HOME = { preliminar: [0.05, 0.00], t1: [0.46, -0.03], t2: [0.88, 0.05] };
+const SEEDS_FRAC_FAR = { t3: [0.08, 0.00], t4: [0.24, 0.14], t5: [0.40, -0.15], t6: [0.55, 0.12], t7: [0.68, -0.10], t8: [0.87, 0.02] };
+
+function seedPixelFor(cfg, seedsFrac) {
+  const interp = makeInterp(cfg.profile);
+  return (tid) => { const [yf, xoff] = seedsFrac[tid]; const [, swF] = interp(yf); return [cfg.cx + swF * cfg.refW + xoff * cfg.refW, yf * H]; };
 }
-
-const tituloLabel = new Int16Array(nx * ny).fill(-1); // índice en MAINLAND_TITULOS
-function assignTitulos() {
-  const ids = MAINLAND_TITULOS.map((t) => t.id);
-  const target = ids.map((id) => (mainlandArts[id] / totalMainlandArts) * continentCells);
-  const pos = ids.map(seedPixel);
+function assignTitulosOnMask(mask, subset, seedPixelFn) {
+  const ids = subset.map((t) => t.id);
+  const artsMap = {}; let total = 0;
+  for (const t of subset) { const n = artCountOf(t); artsMap[t.id] = n; total += n; }
+  const { i0, i1, j0, j1 } = bboxOfMask(mask);
+  let cellCount = 0;
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (mask[j * nx + i]) cellCount++;
+  const target = ids.map((id) => (artsMap[id] / total) * cellCount);
+  const pos = ids.map(seedPixelFn);
   const w = ids.map(() => 0);
   function pass() {
     const areas = ids.map(() => 0);
-    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-      const idx = j * nx + i; if (!onContinent[idx]) continue;
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const idx = j * nx + i; if (!mask[idx]) continue;
       const x = cx(i), y = cy(j);
       let best = -1, bd = Infinity;
       for (let k = 0; k < ids.length; k++) {
         const d = (x - pos[k][0]) ** 2 + (y - pos[k][1]) ** 2 - w[k];
         if (d < bd) { bd = d; best = k; }
       }
-      tituloLabel[idx] = best; areas[best]++;
+      tituloLabel[idx] = idIndex[ids[best]];
+      areas[best]++;
     }
     return areas;
   }
@@ -178,9 +210,9 @@ function assignTitulos() {
     for (let k = 0; k < ids.length; k++) w[k] += 850 * ((target[k] - areas[k]) / target[k]);
   }
   pass();
-  return ids;
 }
-const TITULO_IDS = assignTitulos();
+assignTitulosOnMask(HOME.mask, HOME_TITULOS, seedPixelFor(HOME_CFG, SEEDS_FRAC_HOME));
+assignTitulosOnMask(FAR.mask, FAR_MAINLAND_TITULOS, seedPixelFor(FAR_CFG, SEEDS_FRAC_FAR));
 
 /* reasignar fragmentos desconectados de un título al vecino mayoritario */
 function fixFragments(labelArr, validCells) {
@@ -222,16 +254,16 @@ function fixFragments(labelArr, validCells) {
     if (!changed) break;
   }
 }
-fixFragments(tituloLabel, (idx) => onContinent[idx] === 1);
+fixFragments(tituloLabel, (idx) => onLand[idx] === 1);
 
-/* ═══════════════ 3. Bandas de capítulo (treemap a lo largo del eje dominante) ═══════════════ */
-const capLabel = {}; // tituloId -> Int16Array(nx*ny) con índice de capítulo (-1 fuera)
+/* ═══════════════ 3. Comarcas de capítulo: curva orgánica primero ═══════════════ */
+const capLabel = {}; // tituloId -> { label, order, axis, curves, alongMin, alongMax }
 const capMeta = {};  // capId -> { name, tituloId, arts:[...] }
 
-function sliceIntoChapterBands(tid, tIndex) {
+function sliceIntoChapterBandsOrganic(tid, tIndex) {
   const t = TITULOS.find((x) => x.id === tid);
   const cellIdxs = [];
-  for (let idx = 0; idx < nx * ny; idx++) if (onContinent[idx] && tituloLabel[idx] === tIndex) cellIdxs.push(idx);
+  for (let idx = 0; idx < nx * ny; idx++) if (onLand[idx] && tituloLabel[idx] === tIndex) cellIdxs.push(idx);
   const label = new Int16Array(nx * ny).fill(-1);
 
   if (t.islands.length === 1) {
@@ -240,39 +272,76 @@ function sliceIntoChapterBands(tid, tIndex) {
     capLabel[tid] = { label, order: [t.islands[0].id] };
     return;
   }
-  // bbox de la región para elegir el eje dominante
+
   let minX = W, maxX = 0, minY = H, maxY = 0;
   for (const idx of cellIdxs) { const i = idx % nx, j = (idx / nx) | 0; const x = cx(i), y = cy(j); if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
   const axis = (maxY - minY) >= (maxX - minX) ? 'y' : 'x';
-  const proj = (idx) => { const i = idx % nx, j = (idx / nx) | 0; return axis === 'y' ? cy(j) : cx(i); };
-  const sorted = cellIdxs.slice().sort((a, b) => proj(a) - proj(b));
+  const cutCoord = (idx) => { const i = idx % nx, j = (idx / nx) | 0; return axis === 'y' ? cy(j) : cx(i); };
+  const alongCoord = (idx) => { const i = idx % nx, j = (idx / nx) | 0; return axis === 'y' ? cx(i) : cy(j); };
+  const cutMin = axis === 'y' ? minY : minX, cutMax = axis === 'y' ? maxY : maxX;
+  const alongMin = axis === 'y' ? minX : minY, alongMax = axis === 'y' ? maxX : maxY;
 
+  const sorted = cellIdxs.slice().sort((a, b) => cutCoord(a) - cutCoord(b));
   const totalArts = t.islands.reduce((s, is) => s + (is.arts[1] - is.arts[0] + 1), 0);
-  let cursor = 0;
-  const order = [];
-  t.islands.forEach((is, k) => {
-    const n = is.arts[1] - is.arts[0] + 1;
-    const take = k === t.islands.length - 1 ? sorted.length - cursor : Math.round((n / totalArts) * sorted.length);
-    for (let s = cursor; s < Math.min(cursor + take, sorted.length); s++) label[sorted[s]] = k;
-    cursor += take;
-    capMeta[is.id] = { name: is.name, tituloId: tid, arts: artsOf(is.arts) };
-    order.push(is.id);
-  });
-  capLabel[tid] = { label, order, axis };
-}
-TITULO_IDS.forEach((tid, k) => sliceIntoChapterBands(tid, k));
 
-/* ═══════════════ islas costeras (Títulos IX y X) ═══════════════ */
+  /* posiciones base de corte, proporcionales al nº de artículos de cada capítulo */
+  const baselines = [];
+  let cursor = 0;
+  for (let k = 0; k < t.islands.length - 1; k++) {
+    const n = t.islands[k].arts[1] - t.islands[k].arts[0] + 1;
+    cursor += Math.round((n / totalArts) * sorted.length);
+    const c = Math.min(Math.max(cursor, 1), sorted.length - 1);
+    baselines.push(cutCoord(sorted[c]));
+  }
+
+  /* amplitud de la onda: acotada al 35% del hueco mínimo entre cortes vecinos,
+     para que las curvas nunca se crucen entre sí. */
+  const bounds = [cutMin, ...baselines, cutMax];
+  let minGap = Infinity;
+  for (let k = 0; k < bounds.length - 1; k++) minGap = Math.min(minGap, bounds[k + 1] - bounds[k]);
+  const amp = Math.max(2, minGap * 0.35);
+  const isMountains = t.chapterDivider === 'mountains';
+
+  const seedBase = 5000 + tIndex * 191;
+  const curves = baselines.map((base, k) => {
+    const rnd = mulberry(seedBase + k * 37);
+    const nH = isMountains ? 5 : 3;
+    const harmonics = [];
+    for (let h = 0; h < nH; h++) {
+      const freq = (isMountains ? 2 : 1) + h * (isMountains ? 2.1 : 1.6) + rnd() * 0.7;
+      const a = amp * (isMountains ? (0.5 - h * 0.07) : (0.55 - h * 0.15));
+      harmonics.push({ freq, phase: rnd() * Math.PI * 2, amp: a });
+    }
+    const fn = (u) => harmonics.reduce((s, h) => s + Math.sin(u * Math.PI * 2 * h.freq + h.phase) * h.amp, 0);
+    return { base, fn };
+  });
+  const uOf = (v) => (v - alongMin) / ((alongMax - alongMin) || 1);
+  const curveVal = (curve, alongVal) => curve.base + curve.fn(uOf(alongVal));
+
+  for (const idx of cellIdxs) {
+    const cc = cutCoord(idx), ac = alongCoord(idx);
+    let band = 0;
+    for (const curve of curves) if (cc > curveVal(curve, ac)) band++;
+    label[idx] = Math.min(band, t.islands.length - 1);
+  }
+
+  const order = [];
+  t.islands.forEach((is) => { capMeta[is.id] = { name: is.name, tituloId: tid, arts: artsOf(is.arts) }; order.push(is.id); });
+  capLabel[tid] = { label, order, axis, curves, alongMin, alongMax, isMountains };
+}
+TITULO_IDS.forEach((tid, k) => sliceIntoChapterBandsOrganic(tid, k));
+
+/* ═══════════════ islas costeras (Títulos IX y X), junto al continente "far" ═══════════════ */
 function blobPolygon(ccx, ccy, r, seed) {
   const rnd = mulberry(seed);
   const n = 20, pts = [];
   for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; const jr = 0.82 + rnd() * 0.34; pts.push([ccx + Math.cos(a) * r * jr, ccy + Math.sin(a) * r * jr]); }
   return pts;
 }
-/* colchón de mar: dilata la costa varias pasadas para garantizar un estrecho
-   real entre el continente y cualquier isla (nunca deben tocarse). */
+/* colchón de mar: dilata toda la tierra (ambos continentes) varias pasadas
+   para garantizar un estrecho real entre continentes/islas (nunca se tocan). */
 const COAST_GAP_CELLS = 14; // ≈ 14*STEP px de mar mínimo
-let nearCoast = onContinent;
+let nearCoast = onLand;
 for (let r = 0; r < COAST_GAP_CELLS; r++) {
   const next = new Uint8Array(nx * ny);
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
@@ -288,15 +357,19 @@ for (let r = 0; r < COAST_GAP_CELLS; r++) {
   nearCoast = next;
 }
 
-const ISLAND_SEEDS_FRAC = { t9: [0.40, 0.34], t10: [0.72, 0.40] };
-const islandCellLabel = new Int16Array(nx * ny).fill(-1); // índice en ISLAND_TITULOS
+const FAR_ARTS_TOTAL = FAR_MAINLAND_TITULOS.reduce((s, t) => s + artCountOf(t), 0);
+const UNIT_FAR = (FAR.count * STEP * STEP) / FAR_ARTS_TOTAL; // px² por artículo (escala de referencia)
+const ISLAND_SEEDS_FRAC = { t9: [0.28, 0.62], t10: [0.58, 0.66] };
+const islandCellLabel = new Int16Array(nx * ny).fill(-1);
+const interpFar = makeInterp(FAR_CFG.profile);
 for (let k = 0; k < ISLAND_TITULOS.length; k++) {
   const t = ISLAND_TITULOS[k];
   const arts = t.islands[0].arts[1] - t.islands[0].arts[0] + 1;
-  const area = arts * UNIT;
+  const area = arts * UNIT_FAR;
   const r = Math.sqrt(area / Math.PI) * 1.12;
   const [yf, xoff] = ISLAND_SEEDS_FRAC[t.id];
-  const c = [CENTER_X + xoff * W, yf * H];
+  const [, swF] = interpFar(yf);
+  const c = [FAR_CFG.cx + swF * FAR_CFG.refW + xoff * FAR_CFG.refW, yf * H];
   const poly = blobPolygon(c[0], c[1], r, 9000 + k * 77);
   const i0 = Math.max(0, Math.floor((c[0] - r * 1.3) / STEP)), i1 = Math.min(nx - 1, Math.ceil((c[0] + r * 1.3) / STEP));
   const j0 = Math.max(0, Math.floor((c[1] - r * 1.3) / STEP)), j1 = Math.min(ny - 1, Math.ceil((c[1] + r * 1.3) / STEP));
@@ -437,15 +510,24 @@ for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
   }
 }
 
-/* ═══════════════ rutas marítimas: solo para conectar las 2 islas ═══════════════ */
+/* ═══════════════ rutas marítimas: cruce obligatorio home↔far + 2 islas ═══════════════ */
 const seaRoutes = [];
 function nearestPair(a, b) { let best = null, bd = Infinity; for (const x of a) for (const y of b) { const d = (artCenter[x][0] - artCenter[y][0]) ** 2 + (artCenter[x][1] - artCenter[y][1]) ** 2; if (d < bd) { bd = d; best = [x, y]; } } return best; }
 function addSea(a, b) { adj[a].add(b); adj[b].add(a); seaRoutes.push([a, b]); }
 function reachableFrom(start) { const seen = new Set([start]); const st = [start]; while (st.length) { const c = st.pop(); for (const m of adj[c]) if (!seen.has(m)) { seen.add(m); st.push(m); } } return seen; }
 
+const START_ART = TITULOS.find((t) => t.start).islands[0].arts[0];
+{
+  const reach = reachableFrom(START_ART);
+  const farArts = []; for (const t of FAR_MAINLAND_TITULOS) for (const is of t.islands) for (const n of artsOf(is.arts)) farArts.push(n);
+  if (!farArts.some((n) => reach.has(n))) {
+    const pair = nearestPair([...reach], farArts);
+    if (pair) addSea(pair[0], pair[1]);
+  }
+}
 for (const t of ISLAND_TITULOS) {
   const islArts = capMeta[t.islands[0].id].arts;
-  const reach = reachableFrom(1);
+  const reach = reachableFrom(START_ART);
   if (islArts.some((n) => reach.has(n))) continue;
   const mainland = [...reach];
   const pair = nearestPair(mainland, islArts);
@@ -454,7 +536,7 @@ for (const t of ISLAND_TITULOS) {
 // red de seguridad: cualquier resto desconectado se une por el par más cercano
 let guard = 0;
 while (guard++ < 20) {
-  const reach = reachableFrom(1);
+  const reach = reachableFrom(START_ART);
   if (reach.size === 169) break;
   const outside = []; for (let n = 1; n <= 169; n++) if (!reach.has(n)) outside.push(n);
   const pair = nearestPair([...reach], outside);
@@ -462,71 +544,44 @@ while (guard++ < 20) {
   addSea(pair[0], pair[1]);
 }
 
-/* ═══════════════ fronteras decorativas río/cordillera entre capítulos ═══════════════ */
+/* ═══════════════ fronteras decorativas río/cordillera: la curva ES la frontera ═══════════════ */
 const chapterBorders = [];
 for (const t of MAINLAND_TITULOS) {
   if (t.islands.length <= 1 || !t.chapterDivider) continue;
-  const { label, order } = capLabel[t.id];
-  for (let k = 0; k < order.length - 1; k++) {
-    // segmentos de frontera entre banda k y banda k+1 (bandas consecutivas)
-    const segs = [];
-    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-      const idx = j * nx + i; if (label[idx] !== k) continue;
-      for (const [di, dj] of [[1, 0], [0, 1]]) {
-        const ni = i + di, nj = j + dj; if (ni >= nx || nj >= ny) continue;
-        if (label[nj * nx + ni] === k + 1) {
-          const x = cx(i), y = cy(j);
-          if (di === 1) segs.push([[x + STEP / 2, y - STEP / 2], [x + STEP / 2, y + STEP / 2]]);
-          else segs.push([[x - STEP / 2, y + STEP / 2], [x + STEP / 2, y + STEP / 2]]);
-        }
-      }
+  const capInfo = capLabel[t.id];
+  const { axis, curves, alongMin, alongMax } = capInfo;
+  for (const curve of curves) {
+    const steps = 90, pts = [];
+    for (let s = 0; s <= steps; s++) {
+      const u = s / steps;
+      const alongVal = alongMin + (alongMax - alongMin) * u;
+      const cutVal = curve.base + curve.fn(u);
+      pts.push(axis === 'y' ? [alongVal, cutVal] : [cutVal, alongVal]);
     }
-    if (!segs.length) continue;
-    // encadenar segmentos por proximidad de extremos (greedy)
-    const used = new Uint8Array(segs.length);
-    const chains = [];
-    for (let s = 0; s < segs.length; s++) {
-      if (used[s]) continue;
-      used[s] = 1; let chain = segs[s].slice();
-      let extended = true;
-      while (extended) {
-        extended = false;
-        const tail = chain[chain.length - 1], head = chain[0];
-        for (let o = 0; o < segs.length; o++) {
-          if (used[o]) continue;
-          const [pa, pb] = segs[o];
-          if (Math.hypot(pa[0] - tail[0], pa[1] - tail[1]) < STEP * 1.6) { chain.push(pb); used[o] = 1; extended = true; }
-          else if (Math.hypot(pb[0] - tail[0], pb[1] - tail[1]) < STEP * 1.6) { chain.push(pa); used[o] = 1; extended = true; }
-          else if (Math.hypot(pa[0] - head[0], pa[1] - head[1]) < STEP * 1.6) { chain.unshift(pb); used[o] = 1; extended = true; }
-          else if (Math.hypot(pb[0] - head[0], pb[1] - head[1]) < STEP * 1.6) { chain.unshift(pa); used[o] = 1; extended = true; }
-        }
-      }
-      chains.push(chain);
-    }
-    chains.sort((a, b) => b.length - a.length);
-    let chain = chains[0]; if (!chain || chain.length < 2) continue;
-    chain = dp(chain, 2.2);
-    chain = chaikin(chain, false); chain = chaikin(chain, false);
+    let chain = pts;
+    if (t.chapterDivider === 'river') { chain = chaikin(chain, false); chain = chaikin(chain, false); }
+    else { chain = dp(chain, 1.5); } // cordilleras: más quiebros, menos suavizado
     const d = 'M' + chain.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join('L');
     chapterBorders.push({ tituloId: t.id, style: t.chapterDivider, name: t.dividerName, path: d });
   }
 }
 
 /* ═══════════════ informe ═══════════════ */
-const reachFinal = reachableFrom(1);
-console.log('Artículos:', Object.keys(artPath).length, '| conexos desde art.1:', reachFinal.size, '/169');
-console.log('Rutas marítimas (solo islas):', seaRoutes.length, '| fronteras río/cordillera:', chapterBorders.length);
+const reachFinal = reachableFrom(START_ART);
+console.log('Artículos:', Object.keys(artPath).length, '| conexos desde art.', START_ART, ':', reachFinal.size, '/169');
+console.log('Continente home: celdas=', HOME.count, '| far: celdas=', FAR.count);
+console.log('Rutas marítimas (cruce + islas):', seaRoutes.length, '| fronteras río/cordillera:', chapterBorders.length);
 for (const t of TITULOS) {
-  const n = t.islands.reduce((s, is) => s + (is.arts[1] - is.arts[0] + 1), 0);
-  console.log(`  ${(t.roman || 'Prel.').padEnd(5)} ${t.name.slice(0, 26).padEnd(26)} arts=${String(n).padStart(2)} capítulos=${t.islands.length}${t.island ? ' (isla)' : ''}`);
+  const n = artCountOf(t);
+  console.log(`  ${(t.roman || 'Prel.').padEnd(5)} ${t.name.slice(0, 26).padEnd(26)} arts=${String(n).padStart(2)} capítulos=${t.islands.length} continente=${t.continent || '-'}${t.island ? ' (isla)' : ''}`);
 }
 
 /* ═══════════════ salida ═══════════════ */
 const adjOut = {}; for (let n = 1; n <= 169; n++) adjOut[n] = [...adj[n]].sort((a, b) => a - b);
 const islandsOut = {}; for (const [id, m] of Object.entries(capMeta)) islandsOut[id] = { name: m.name, tituloId: m.tituloId, center: artCenter[m.arts[Math.floor(m.arts.length / 2)]] || [0, 0], arts: m.arts };
-const titulosOut = {}; for (const t of TITULOS) titulosOut[t.id] = { name: t.name, theme: t.theme, color: t.color, roman: t.roman, islands: t.islands.map((is) => is.id) };
+const titulosOut = {}; for (const t of TITULOS) titulosOut[t.id] = { name: t.name, theme: t.theme, color: t.color, roman: t.roman, islands: t.islands.map((is) => is.id), continent: t.continent || null };
 
-const out = `/* Generado por tools/gen-map.js — mundo Constitucia (continente único, 169 territorios) */
+const out = `/* Generado por tools/gen-map.js — mundo Constitucia (2 continentes, 169 territorios) */
 const MAP = ${JSON.stringify({ view: [W, H], art: { path: artPath, center: artCenter, island: islandOf, titulo: tituloOf }, islands: islandsOut, titulos: titulosOut, adj: adjOut, seaRoutes, chapterBorders }, null, 0)};
 if (typeof module !== 'undefined') module.exports = { MAP };
 `;

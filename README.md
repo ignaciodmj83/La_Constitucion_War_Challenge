@@ -2,11 +2,13 @@
 
 # ⚔️ La Constitución: WarChallenge
 
-**Aprende la Constitución Española de 1978 conquistando un continente.**
+**Aprende la Constitución Española de 1978 conquistando dos continentes.**
 
-Un juego de estrategia tipo *Risk*, con mapa inspirado en Poniente, donde
-cada uno de los 169 artículos es un territorio y cada título una región —
-empezando siempre en el norte.
+Un juego de estrategia tipo *Risk*, con un mundo de dos continentes al
+estilo de los mapas de fantasía (Poniente y Essos), donde cada uno de los
+169 artículos es un territorio y cada título una región de color propio —
+empezando siempre en el norte y cruzando el mar para llegar al segundo
+continente.
 
 [![CI](https://github.com/ignaciodmj83/La_Constitucion_War_Challenge/actions/workflows/ci.yml/badge.svg)](https://github.com/ignaciodmj83/La_Constitucion_War_Challenge/actions/workflows/ci.yml)
 [![Jugar online](https://img.shields.io/badge/▶_jugar-online-brightgreen)](https://la-constitucion-war-challenge.vercel.app/)
@@ -25,13 +27,17 @@ empezando siempre en el norte.
 
 ## ¿Qué es esto?
 
-La Constitución Española es aquí **Constitucia**: un único continente alargado
-de norte a sur, inspirado en los mapas de fantasía tipo Poniente. Se empieza
-siempre en el norte, en **El Confín Helado**, y hay que conquistarlo todo hacia
-el sur. Cada uno de los 11 **títulos** es una región del continente (o una isla
-costera, en el caso de los dos últimos); si el título tiene capítulos, esa región
-se divide en comarcas separadas por un **río o una cordillera** — contiguas,
-nunca por mar. Cada uno de los **169 artículos** es un **territorio**.
+La Constitución Española es aquí **Constitucia**: un mundo de **dos
+continentes** separados por el mar, inspirado en los mapas de fantasía tipo
+Poniente/Essos. Se empieza siempre en el norte del continente pequeño, en
+**El Confín Helado** (Preliminar + Título I + Título II), y hay que cruzar
+el mar por una ruta obligatoria para llegar al continente grande (Títulos
+III a VIII). Cada uno de los 11 **títulos** es una región de color propio,
+visible en el mapa desde el principio aunque no se haya conquistado; si el
+título tiene capítulos, esa región se divide en comarcas separadas por un
+**río o una cordillera** con fronteras orgánicas — contiguas, nunca por mar.
+Solo los dos últimos títulos son islas costeras, alcanzables por barco.
+Cada uno de los **169 artículos** es un **territorio**.
 
 Primero te **preparas** con el profesor de la región, que te explica sus artículos
 uno a uno con una escena visual y un truco para recordarlos; luego **conquistas**
@@ -57,9 +63,11 @@ preparación.
 
 ## Características
 
-- 🗺️ **Continente único tipo Poniente**, siempre empezando en el norte; los títulos con
-  capítulos se dividen por **río o cordillera** (contiguos), y solo 2 islas costeras
-  necesitan barco. **Zoom y pan** propios del mapa.
+- 🗺️ **Dos continentes tipo Poniente/Essos**, unidos por un cruce de mar obligatorio,
+  siempre empezando en el norte; cada título tiene su propio color (visible incluso
+  sin conquistar) y los que tienen capítulos se dividen por **río o cordillera** con
+  fronteras orgánicas (contiguos), y solo 2 islas costeras necesitan barco. **Zoom y
+  pan** propios del mapa.
 - 📜 **169 territorios = 169 artículos**, cada uno con explicación, escena visual
   mnemotécnica, truco de asociación y pregunta tipo test.
 - 🎓 **Modo preparación** con un profesor de personalidad propia por territorio.
@@ -88,7 +96,7 @@ con doble clic (funciona sin servidor y sin internet).
 | `npm run serve` | Levanta el juego en `http://localhost:8080`. |
 | `npm test` | Valida que los 169 artículos y el mapa son coherentes. |
 | `npm run build` | Genera `dist/index.html` (todo el juego en un solo archivo). |
-| `npm run map` | Regenera el mapa del continente (`js/map-data.js`). |
+| `npm run map` | Regenera el mapa del mundo (`js/map-data.js`). |
 
 ## Estructura del proyecto
 
@@ -101,7 +109,7 @@ La_Constitucion_War_Challenge/
 │   ├── map-data.js     # mundo generado (169 formas, centros y adyacencias)
 │   ├── data.js         # los 169 artículos: explicación, escena y pregunta
 │   └── game.js         # motor del juego (mapa, zoom, batallas, El Olvido)
-├── tools/gen-map.js    # generador del continente (silueta + Voronoi + río/cordillera)
+├── tools/gen-map.js    # generador del mundo (2 siluetas + Voronoi + río/cordillera orgánicos)
 ├── scripts/            # servidor local y generador del bundle
 ├── tests/validate.js   # pruebas de integridad del contenido
 └── docs/ROADMAP.md     # hoja de ruta (incl. camino a la App Store)

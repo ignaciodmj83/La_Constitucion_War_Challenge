@@ -4,6 +4,29 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.2.0] — 2026-07-07
+
+### Cambiado (dos continentes y fronteras orgánicas)
+- El mundo pasa de **un único continente** a **dos continentes** separados por
+  el mar: "home" (Preliminar + Título I + Título II, más pequeño, tipo
+  Poniente — aquí se empieza siempre) y "far" (Títulos III a VIII, más
+  grande, con silueta propia tipo Essos). Para llegar al segundo hay que
+  cruzar el mar por una **ruta marítima obligatoria** (además de las 2 rutas
+  a las islas IX y X, reubicadas junto a la costa de "far").
+- **Fronteras de capítulo realmente orgánicas**: los ríos y cordilleras entre
+  comarcas de un mismo título ya no se generan cortando una lista ordenada de
+  celdas (lo que daba líneas rectas o diagonales "sin gracia"); ahora se
+  genera primero una **curva serpenteante** (ríos: meandro suave con pocos
+  armónicos; cordilleras: quiebros más bruscos con más armónicos y menos
+  suavizado) con la amplitud acotada para no cruzarse con las curvas vecinas,
+  y esa curva se usa a la vez para **clasificar las celdas** del mapa y para
+  **dibujar la frontera decorativa** — orgánica por construcción.
+- **Colores de reino visibles desde el principio**: los territorios que aún
+  no se han alcanzado dejaban de mostrar su color y se pintaban de un gris
+  plano uniforme; ahora se pintan con el color de su título muy oscurecido,
+  de forma que la silueta de cada título se intuye en el mapa desde el
+  primer vistazo, aunque no se haya conquistado ni un solo territorio.
+
 ## [2.1.0] — 2026-07-07
 
 ### Cambiado (mapa inspirado en Poniente)

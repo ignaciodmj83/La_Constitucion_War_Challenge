@@ -1,6 +1,6 @@
 {
   "name": "la-constitucion-war-challenge",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "La Constitución: WarChallenge — juego de aprendizaje de la Constitución Española de 1978 con mecánica de mapa de conquista tipo Risk.",
   "type": "commonjs",
   "scripts": {

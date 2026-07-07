@@ -277,7 +277,7 @@ function refreshMap() {
     const land = g.querySelector('.land');
     if (st === 'owned') { land.style.fill = besieged ? darken(col, 0.15) : col; land.style.stroke = 'rgba(255,255,255,.65)'; }
     else if (st === 'attackable') { land.style.fill = darken(col, 0.5); land.style.stroke = '#e3c07a'; }
-    else { land.style.fill = '#232f3e'; land.style.stroke = '#12202e'; }
+    else { land.style.fill = darken(col, 0.8); land.style.stroke = darken(col, 0.55); }
   }
   // rutas
   document.querySelectorAll('.sea-route').forEach((r) => {
