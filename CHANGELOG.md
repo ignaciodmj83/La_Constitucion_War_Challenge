@@ -4,6 +4,18 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.0.0] — 2026-07-07
+
+### Cambiado (rediseño del mapa)
+- **Nuevo mundo "Constitucia" con estructura real de la Constitución**: 11 títulos
+  como continentes y, cuando el título tiene capítulos, **archipiélagos** cuyas
+  islas son los capítulos.
+- **169 territorios** (uno por artículo) en lugar de 15. Cada continente tiene un
+  color y una temática únicos (paleta validada para daltonismo).
+- **Zoom y desplazamiento propios del mapa** (rueda/botones + arrastrar), sin
+  afectar a la página.
+- Leyenda de continentes con progreso por título; preparación por capítulo.
+
 ## [1.0.0] — 2026-07-07
 
 ### Añadido
@@ -22,4 +34,5 @@ y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.ME
   y en [GitHub Pages](https://ignaciodmj83.github.io/La_Constitucion_War_Challenge/)
   (ambos se actualizan solos en cada cambio a `main`).
 
+[2.0.0]: https://github.com/ignaciodmj83/La_Constitucion_War_Challenge/releases/tag/v2.0.0
 [1.0.0]: https://github.com/ignaciodmj83/La_Constitucion_War_Challenge/releases/tag/v1.0.0

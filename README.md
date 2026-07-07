@@ -2,10 +2,10 @@
 
 # ⚔️ La Constitución: WarChallenge
 
-**Aprende la Constitución Española de 1978 conquistando un continente.**
+**Aprende la Constitución Española de 1978 conquistando un mundo.**
 
-Un juego de estrategia tipo *Risk* donde cada territorio es un título de la
-Constitución y se conquista respondiendo, sin fallar, una pregunta por artículo.
+Un juego de estrategia tipo *Risk* donde cada uno de los 169 artículos es un
+territorio, cada título un continente y cada capítulo una isla.
 
 [![CI](https://github.com/ignaciodmj83/La_Constitucion_War_Challenge/actions/workflows/ci.yml/badge.svg)](https://github.com/ignaciodmj83/La_Constitucion_War_Challenge/actions/workflows/ci.yml)
 [![Jugar online](https://img.shields.io/badge/▶_jugar-online-brightgreen)](https://la-constitucion-war-challenge.vercel.app/)
@@ -24,14 +24,15 @@ Constitución y se conquista respondiendo, sin fallar, una pregunta por artícul
 
 ## ¿Qué es esto?
 
-La Constitución Española es aquí un continente, **Constitucia**, dividido en 15
-territorios (los títulos de la Constitución) y 2 islas. La **superficie de cada
-territorio es proporcional a su número de artículos**, así que el mapa es, a la
-vez, un mapa mental de toda la Constitución.
+La Constitución Española es aquí el mundo de **Constitucia**. Cada uno de los 11
+**títulos** es un continente; si el título tiene capítulos, es un **archipiélago**
+cuyas islas son los capítulos. Cada uno de los **169 artículos** es un **territorio**.
+El mapa es, a la vez, un mapa mental fiel de toda la Constitución.
 
-Para conquistar un territorio primero te **preparas** con su profesor, que te
-explica sus artículos uno a uno, y luego **atacas**: una pregunta por cada
-artículo, sin fallar ninguna.
+Primero te **preparas** con el profesor del continente, que te explica sus artículos
+uno a uno con una escena visual y un truco para recordarlos; luego **conquistas**
+cada territorio respondiendo su pregunta. El mapa tiene **zoom y desplazamiento
+propios** para explorarlo de cerca.
 
 | Preparación con el profesor | Batalla de conquista |
 |---|---|
@@ -39,26 +40,26 @@ artículo, sin fallar ninguna.
 
 ## Cómo se juega
 
-1. **Elige un territorio** con color vivo (fronterizo con los tuyos).
-2. **Prepárate** 🎓: el profesor del territorio te explica cada artículo con una
-   escena visual y un truco para recordarlo por asociación.
-3. **Conquista** ⚔️: responde una pregunta por artículo. **Un solo fallo detiene
-   el ataque** — por eso conviene prepararse antes.
-4. **Expande** tu territorio, defiende lo conquistado de **El Olvido** (que borra
-   tu memoria con el tiempo real) y domina el continente entero.
+1. **Explora** el mundo con **zoom** (rueda o botones ＋/−) y arrastrando para moverte.
+2. **Prepárate** 🎓: el profesor del continente te explica sus artículos con una
+   escena visual y un truco para recordarlos por asociación.
+3. **Conquista** ⚔️: pulsa un territorio fronterizo y responde su pregunta. Si
+   aciertas, el territorio es tuyo y puedes seguir expandiéndote.
+4. **Completa continentes**, defiéndelos de **El Olvido** (que borra tu memoria
+   con el tiempo real) y domina los 169 territorios.
 
 Atajos: teclas `1`–`4` para responder, `Enter` para continuar, `←`/`→` en la
 preparación.
 
 ## Características
 
-- 🗺️ **Mapa continental** con territorios contiguos, 2 islas y rutas marítimas.
-- 📜 **Los 169 artículos** de la Constitución, cada uno con explicación, escena
-  visual mnemotécnica, truco de asociación y pregunta tipo test.
+- 🗺️ **Mapa mundial** con 8 continentes y 3 archipiélagos (capítulos = islas), rutas marítimas y **zoom/pan** propios.
+- 📜 **169 territorios = 169 artículos**, cada uno con explicación, escena visual
+  mnemotécnica, truco de asociación y pregunta tipo test.
 - 🎓 **Modo preparación** con un profesor de personalidad propia por territorio.
-- ⚔️ **Conquista estricta**: una pregunta por artículo, sin fallar ninguna.
-- 🪖 **Tropas temáticas** visibles en cada territorio (Guardia Real, Los Togados…).
-- 🔥 Combos, 🎖️ rangos, 🏆 14 logros, 📅 racha diaria y 🌫️ repaso espaciado.
+- ⚔️ **Conquista** territorio a territorio: responde la pregunta del artículo y es tuyo.
+- 🪖 **Guarniciones temáticas** por continente (Guardia Real, Los Togados, Mercaderes…).
+- 🔥 Combos, 🎖️ rangos, 🏆 14 logros, 👑 modo prestigio, 📅 racha diaria y 🌫️ repaso espaciado.
 - 💾 Guardado automático en el navegador · 🔊 sonido y 🎉 confeti · **sin conexión**.
 
 ## Jugar en tu ordenador
@@ -90,10 +91,11 @@ La_Constitucion_War_Challenge/
 ├── index.html          # el juego
 ├── css/game.css        # estilos (mapa, tropas, escenas)
 ├── js/
-│   ├── map-data.js     # continente generado (formas y adyacencias)
-│   ├── data.js         # territorios, facciones, profesores y 169 artículos
-│   └── game.js         # motor del juego
-├── tools/gen-map.js    # generador del mapa (Voronoi ponderado por artículos)
+│   ├── hierarchy.js    # estructura real: títulos → capítulos → artículos
+│   ├── map-data.js     # mundo generado (169 formas, centros y adyacencias)
+│   ├── data.js         # jerarquía + los 169 artículos (contenido)
+│   └── game.js         # motor del juego (mapa, zoom, batallas, El Olvido)
+├── tools/gen-map.js    # generador del mundo (Voronoi jerárquico de 2 niveles)
 ├── scripts/            # servidor local y generador del bundle
 ├── tests/validate.js   # pruebas de integridad del contenido
 └── docs/ROADMAP.md     # hoja de ruta (incl. camino a la App Store)
@@ -102,8 +104,7 @@ La_Constitucion_War_Challenge/
 ## Tecnología
 
 Web 100 % estática: **HTML, CSS y JavaScript** sin frameworks ni dependencias.
-El mapa se genera con un diagrama de **Voronoi ponderado** por número de
-artículos; el sonido usa **WebAudio** y los efectos, **Canvas**. Al no usar
+El mapa se genera con un **Voronoi jerárquico de dos niveles** (continentes y, dentro, un territorio por artículo); el sonido usa **WebAudio** y los efectos, **Canvas**. Al no usar
 dependencias externas, el juego funciona sin conexión y es fácil de convertir
 en app móvil más adelante (ver [hoja de ruta](docs/ROADMAP.md)).
 
