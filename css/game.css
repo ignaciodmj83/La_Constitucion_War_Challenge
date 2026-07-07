@@ -111,6 +111,8 @@ body {
 .leg-row:hover { background: var(--panel2); }
 .leg-row.done { opacity: .65; }
 .leg-dot { width: 13px; height: 13px; border-radius: 4px; flex: none; box-shadow: 0 0 0 1px rgba(0,0,0,.3); }
+.leg-emblem { width: 26px; height: 26px; flex: none; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; border-radius: 8px; box-shadow: 0 0 0 1px rgba(0,0,0,.35), inset 0 1px 2px rgba(255,255,255,.25); }
 .leg-name { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .leg-prog { color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
@@ -168,6 +170,15 @@ body {
 @keyframes sceneIn { from { opacity: 0; transform: scale(.4) translateY(8px); } }
 .scene-plus { font-size: 20px; color: var(--muted); font-weight: 700; }
 .scene-wrap.small .scene { padding: 8px 14px; } .scene-wrap.small .scene-emoji { font-size: 28px; } .scene-wrap.small .scene-plus { font-size: 15px; }
+
+/* Escudo pictórico (una sola imagen por artículo) */
+.crest-wrap { display: flex; justify-content: center; }
+.crest { width: 122px; height: auto; animation: crestIn .4s ease backwards; overflow: visible; }
+.scene-wrap.small .crest { width: 84px; }
+@keyframes crestIn { from { opacity: 0; transform: scale(.5) translateY(10px); } }
+.crest-shield { stroke: #f2e2b0; stroke-width: 3.5; stroke-linejoin: round; filter: drop-shadow(0 5px 8px rgba(0,0,0,.45)); }
+.crest-inner { stroke: rgba(255,255,255,.28); stroke-width: 1.6; }
+.crest-emoji { font-size: 46px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
 
 /* ── Preparación ── */
 .prep-card { width: min(600px,100%); --tc: var(--gold); border-top: 4px solid var(--tc); }
@@ -244,6 +255,31 @@ body {
 .stat-box { border: 1px solid var(--line); border-radius: 11px; background: var(--panel2); padding: 12px 14px; }
 .stat-box .s-val { font-size: 18px; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
 .stat-box .s-lbl { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+/* ── Índice desplegable ── */
+.index-card { width: min(680px,100%); }
+.index-sub { color: var(--muted); font-size: 13px; margin: 4px 0 12px; }
+.index-tree { max-height: 64vh; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; padding-right: 4px; }
+.ix-titulo { border: 1px solid var(--line); border-radius: 11px; background: var(--panel2); overflow: hidden; }
+.ix-titulo > summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; list-style: none; font-weight: 800; }
+.ix-titulo > summary::-webkit-details-marker { display: none; }
+.ix-titulo > summary::before { content: '▸'; color: var(--muted); font-size: 12px; transition: transform .15s; }
+.ix-titulo[open] > summary::before { transform: rotate(90deg); }
+.ix-emblem { width: 30px; height: 30px; flex: none; display: flex; align-items: center; justify-content: center;
+  font-size: 17px; border-radius: 8px; box-shadow: 0 0 0 1px rgba(0,0,0,.35), inset 0 1px 2px rgba(255,255,255,.25); }
+.ix-tname { flex: 1; }
+.ix-prog { color: var(--gold); font-variant-numeric: tabular-nums; font-size: 13px; }
+.ix-body { padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 3px; }
+.ix-cap { font-size: 12px; font-weight: 800; color: var(--muted); margin: 8px 4px 3px; text-transform: uppercase; letter-spacing: .3px; }
+.ix-art { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; border: none; background: transparent;
+  color: var(--text); padding: 6px 8px; border-radius: 8px; cursor: pointer; font: inherit; }
+.ix-art:hover { background: rgba(255,255,255,.06); }
+.ix-art .ix-emoji { font-size: 19px; width: 24px; text-align: center; flex: none; }
+.ix-art .ix-n { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; min-width: 52px; }
+.ix-art .ix-t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--muted); }
+.ix-art .ix-st { flex: none; font-size: 13px; }
+.ix-art.owned .ix-t { color: var(--text); }
+.ix-art.locked { opacity: .6; }
 
 /* ── Intro ── */
 .intro-card { width: min(640px,100%); }

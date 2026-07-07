@@ -372,8 +372,9 @@ function renderLegend() {
     const done = owned === arts.length;
     const bes = arts.some((n) => S.owned[n]) && memoryOf(t.id) < MEMORY_DANGER;
     const divIcon = t.island ? '🏝️' : t.chapterDivider === 'river' ? '🌊' : t.chapterDivider === 'mountains' ? '⛰️' : '';
+    const emblem = MAP.titulos[t.id].emblem || t.emblem || t.faction.unit;
     return `<button class="leg-row ${done ? 'done' : ''}" data-tid="${t.id}" title="${t.theme}${t.chapterDivider ? ` (dividido por ${t.dividerName})` : ''}">
-      <span class="leg-dot" style="background:${t.color}"></span>
+      <span class="leg-emblem" style="background:${t.color}">${emblem}</span>
       <span class="leg-name">${t.roman ? t.roman + '. ' : ''}${t.name}</span>
       <span class="leg-prog">${divIcon ? divIcon + ' ' : ''}${bes ? '🌫️ ' : ''}${owned}/${arts.length}${done ? ' ✓' : ''}</span>
     </button>`;
@@ -387,8 +388,25 @@ function renderLegend() {
   }));
 }
 
-/* ───────────────────────── Escena visual ───────────────────────── */
-function sceneHTML(a) { return `<div class="scene">${a.img.map((e) => `<span class="scene-emoji">${e}</span>`).join('<span class="scene-plus">+</span>')}</div>`; }
+/* ───────────────────────── Escudo pictórico del artículo ─────────────────────────
+   Una única imagen: un escudo heráldico con el color del reino y el símbolo
+   que representa la palabra clave del artículo (primer emoji de su escena). */
+function crestSVG(emoji, color) {
+  const id = 'cg' + Math.random().toString(36).slice(2, 8);
+  const top = lighten(color, 0.30), bot = darken(color, 0.30);
+  return `<svg class="crest" viewBox="0 0 100 116" role="img" aria-hidden="true">
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bot}"/></linearGradient></defs>
+    <path class="crest-shield" d="M50 4 L94 18 L94 54 Q94 92 50 112 Q6 92 6 54 L6 18 Z" fill="url(#${id})"/>
+    <path class="crest-inner" d="M50 12 L88 24 L88 54 Q88 86 50 103 Q12 86 12 54 L12 24 Z" fill="none"/>
+    <text class="crest-emoji" x="50" y="54" text-anchor="middle" dominant-baseline="central">${emoji}</text>
+  </svg>`;
+}
+function sceneHTML(a, n) {
+  const col = (n && MAP.art.titulo[n]) ? MAP.titulos[MAP.art.titulo[n]].color : '#8a93a8';
+  const emoji = (a.img && a.img[0]) || '📜';
+  return `<div class="crest-wrap">${crestSVG(emoji, col)}</div>`;
+}
 
 /* ───────────────────────── Preparación (profesor) ───────────────────────── */
 let PREP = null;
@@ -408,7 +426,7 @@ function renderPrepCard() {
   $('prepDots').innerHTML = PREP.arts.map((_, i) => `<span class="pdot ${i === PREP.i ? 'on' : ''} ${i < PREP.i ? 'seen' : ''}"></span>`).join('');
   $('prepArtNum').textContent = `Art. ${num}`;
   $('prepArtTitle').textContent = a.t;
-  $('prepScene').innerHTML = sceneHTML(a);
+  $('prepScene').innerHTML = sceneHTML(a, num);
   $('prepExp').textContent = a.e;
   $('prepMnemo').innerHTML = `<span class="mnemo-tag">💡 Truco para recordarlo</span>${a.mn}`;
   $('prepPrev').disabled = PREP.i === 0;
@@ -443,7 +461,7 @@ function askQuestion() {
   $('bTitulo').textContent = `${t.roman ? t.roman + '. ' : ''}${t.name}`;
   $('bMode').textContent = B.mode === 'attack' ? '⚔️ Conquista' : B.mode === 'defense' ? '🛡️ Defensa' : '📖 Repaso';
   $('bArtLabel').textContent = `Art. ${n} · ${a.t}`;
-  $('bScene').innerHTML = sceneHTML(a);
+  $('bScene').innerHTML = sceneHTML(a, n);
   $('qText').textContent = a.q;
   const box = $('qOptions'); box.innerHTML = '';
   order.forEach((oi, i) => { const btn = document.createElement('button'); btn.className = 'q-opt'; btn.innerHTML = `<span class="k">${i + 1}</span><span>${a.o[oi]}</span>`; btn.addEventListener('click', () => answer(i)); box.appendChild(btn); });
@@ -558,7 +576,7 @@ function openPreBattle(n) {
   $('pbName').textContent = `Art. ${n} · ${a.t}`;
   $('pbArts').textContent = `${t.roman ? t.roman + '. ' : ''}${t.name}${t.islands.length > 1 ? ' · ' + meta.name : ''}`;
   $('pbFaction').innerHTML = `<span class="faction-badge" style="--tc:${t.color}">${t.faction.unit} ${t.faction.name}</span>`;
-  $('pbScene').innerHTML = sceneHTML(a);
+  $('pbScene').innerHTML = sceneHTML(a, n);
   const actions = $('pbActions'); actions.innerHTML = '';
   const prepared = S.prepared[islandId];
 
@@ -628,7 +646,7 @@ function prestige() {
 }
 
 /* ───────────────────────── Modales ───────────────────────── */
-function closeAll() { for (const id of ['preBattle', 'battleEnd', 'achModal', 'statsModal', 'introModal', 'victoryModal', 'prep']) $(id).hidden = true; }
+function closeAll() { for (const id of ['preBattle', 'battleEnd', 'achModal', 'statsModal', 'indexModal', 'introModal', 'victoryModal', 'prep']) $(id).hidden = true; }
 function showAchievements() {
   $('achList').innerHTML = ACHIEVEMENTS.map((a) => { const g = S.ach.includes(a.id); return `<div class="ach ${g ? '' : 'locked'}"><span class="a-icon">${g ? a.icon : '🔒'}</span><div><div class="a-name">${a.name}</div><div class="a-desc">${a.desc}</div></div><span class="a-pts">${g ? '✓ ' : ''}+${a.pts}</span></div>`; }).join('');
   $('achModal').hidden = false;
@@ -648,11 +666,44 @@ function showStats() {
   $('statsModal').hidden = false;
 }
 
+/* ───────────────────────── Índice desplegable (títulos → capítulos → artículos) ───────────────────────── */
+function renderIndex() {
+  const tree = $('indexTree'); if (!tree) return;
+  tree.innerHTML = TITULOS.map((t) => {
+    const arts = artsOfTitulo(t.id); const owned = arts.filter((n) => S.owned[n]).length;
+    const emblem = MAP.titulos[t.id].emblem || t.emblem || t.faction.unit;
+    const multi = t.islands.length > 1;
+    const body = t.islands.map((is) => {
+      const rows = MAP.islands[is.id].arts.map((n) => {
+        const a = ARTICLES[n]; const st = statusOf(n);
+        const ic = st === 'owned' ? '✅' : st === 'attackable' ? '⚔️' : '🔒';
+        return `<button class="ix-art ${st}" data-n="${n}">
+          <span class="ix-emoji">${(a.img && a.img[0]) || '📜'}</span>
+          <span class="ix-n">Art. ${n}</span>
+          <span class="ix-t">${a.t}</span>
+          <span class="ix-st">${ic}</span></button>`;
+      }).join('');
+      return (multi ? `<div class="ix-cap">${is.name}</div>` : '') + rows;
+    }).join('');
+    return `<details class="ix-titulo" ${owned > 0 ? 'open' : ''}>
+      <summary><span class="ix-emblem" style="background:${t.color}">${emblem}</span>
+        <span class="ix-tname">${t.roman ? t.roman + '. ' : ''}${t.name}</span>
+        <span class="ix-prog">${owned}/${arts.length}</span></summary>
+      <div class="ix-body">${body}</div></details>`;
+  }).join('');
+  tree.querySelectorAll('.ix-art').forEach((b) => b.addEventListener('click', () => {
+    const n = +b.dataset.n; $('indexModal').hidden = true; sfx.click();
+    focusArticle(n, 520);
+    if (statusOf(n) !== 'locked') openPreBattle(n);
+  }));
+}
+
 /* ───────────────────────── Init ───────────────────────── */
 function init() {
   buildMap(); renderHud(); checkDaily();
   $('btnAch').addEventListener('click', () => { closeAll(); showAchievements(); });
   $('btnStats').addEventListener('click', () => { closeAll(); showStats(); });
+  $('btnIndex').addEventListener('click', () => { closeAll(); renderIndex(); $('indexModal').hidden = false; });
   $('btnHelp').addEventListener('click', () => { closeAll(); $('introModal').hidden = false; });
   $('btnSound').addEventListener('click', () => { S.sound = !S.sound; renderHud(); save(); });
   $('btnIntroOk').addEventListener('click', () => { S.seenIntro = true; save(); $('introModal').hidden = true; sfx.click(); });

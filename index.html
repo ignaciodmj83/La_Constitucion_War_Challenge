@@ -27,6 +27,7 @@
     </div>
   </div>
   <div class="topbar-actions">
+    <button id="btnIndex" class="icon-btn" title="Índice de la Constitución">🗂️</button>
     <button id="btnAch" class="icon-btn" title="Logros">🏆</button>
     <button id="btnStats" class="icon-btn" title="Estadísticas">📊</button>
     <button id="btnSound" class="icon-btn" title="Sonido">🔊</button>
@@ -146,6 +147,16 @@
 <div id="statsModal" class="overlay" hidden>
   <div class="card list-card"><button class="card-close" data-close="statsModal">✕</button><h2>📊 Estadísticas</h2><div id="statsList" class="stats-grid"></div>
     <button id="btnReset" class="danger-btn">🗑️ Borrar partida y empezar de cero</button></div>
+</div>
+
+<!-- Índice de la Constitución -->
+<div id="indexModal" class="overlay" hidden>
+  <div class="card list-card index-card">
+    <button class="card-close" data-close="indexModal">✕</button>
+    <h2>🗂️ Índice de la Constitución</h2>
+    <p class="index-sub">Todos los títulos, capítulos y artículos con su símbolo. Pulsa un artículo para ir a su territorio en el mapa.</p>
+    <div id="indexTree" class="index-tree"></div>
+  </div>
 </div>
 
 <!-- Intro -->
