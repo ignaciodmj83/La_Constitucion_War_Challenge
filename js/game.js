@@ -237,18 +237,18 @@ function buildMap() {
   }
   svg.appendChild(dividers);
 
-  // etiquetas de continente (nombre del título + guarnición de facción) por isla
+  // emblema grande de cada reino (título), en el centro de su región
   const labels = svgEl('g', { id: 'labels' });
   for (const t of TITULOS) {
-    for (const is of t.islands) {
-      const meta = MAP.islands[is.id]; const c = meta.center;
-      const isCapitulo = t.islands.length > 1;
-      const g = svgEl('g', { class: 'clabel' });
-      const banner = svgEl('text', { x: c[0], y: c[1] - metaLabelDy(is.id), class: 'c-faction' });
-      banner.textContent = t.faction.unit;
-      g.appendChild(banner);
-      labels.appendChild(g);
-    }
+    const arts = artsOfTitulo(t.id);
+    let sx = 0, sy = 0; for (const n of arts) { sx += MAP.art.center[n][0]; sy += MAP.art.center[n][1]; }
+    const c = [sx / arts.length, sy / arts.length];
+    const g = svgEl('g', { class: 'clabel', 'data-tid': t.id });
+    g.appendChild(svgEl('circle', { cx: c[0], cy: c[1], r: 36, class: 'emblem-bg' }));
+    const em = svgEl('text', { x: c[0], y: c[1], class: 'c-emblem' });
+    em.textContent = MAP.titulos[t.id].emblem || t.emblem || t.faction.unit;
+    g.appendChild(em);
+    labels.appendChild(g);
   }
   svg.appendChild(labels);
 
