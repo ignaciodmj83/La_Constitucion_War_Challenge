@@ -18,5 +18,8 @@ y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.ME
   racha diaria, mecánica de "El Olvido" (repaso espaciado) y modo prestigio.
 - Guardado automático de la partida en el navegador (localStorage).
 - Sonido (WebAudio) y confeti (Canvas), sin dependencias externas.
+- Despliegue continuo en [Vercel](https://la-constitucion-war-challenge.vercel.app/)
+  y en [GitHub Pages](https://ignaciodmj83.github.io/La_Constitucion_War_Challenge/)
+  (ambos se actualizan solos en cada cambio a `main`).
 
 [1.0.0]: https://github.com/ignaciodmj83/La_Constitucion_War_Challenge/releases/tag/v1.0.0

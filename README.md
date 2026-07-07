@@ -8,11 +8,13 @@ Un juego de estrategia tipo *Risk* donde cada territorio es un título de la
 Constitución y se conquista respondiendo, sin fallar, una pregunta por artículo.
 
 [![CI](https://github.com/ignaciodmj83/La_Constitucion_War_Challenge/actions/workflows/ci.yml/badge.svg)](https://github.com/ignaciodmj83/La_Constitucion_War_Challenge/actions/workflows/ci.yml)
-[![Jugar online](https://img.shields.io/badge/▶_jugar-online-brightgreen)](https://ignaciodmj83.github.io/La_Constitucion_War_Challenge/)
+[![Jugar online](https://img.shields.io/badge/▶_jugar-online-brightgreen)](https://la-constitucion-war-challenge.vercel.app/)
 ![Sin dependencias](https://img.shields.io/badge/dependencias-ninguna-blue)
 ![169 artículos](https://img.shields.io/badge/artículos-169-e3a93f)
 
-### 👉 [**Jugar ahora**](https://ignaciodmj83.github.io/La_Constitucion_War_Challenge/)
+### 👉 [**Jugar ahora**](https://la-constitucion-war-challenge.vercel.app/)
+
+<sub>Espejo alternativo: [GitHub Pages](https://ignaciodmj83.github.io/La_Constitucion_War_Challenge/)</sub>
 
 ![El mapa de Constitucia](docs/screenshots/mapa.png)
 
