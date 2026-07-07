@@ -1,0 +1,33 @@
+name: 🐛 Informe de error
+description: Algo no funciona como debería en el juego
+title: "[Error]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Gracias por ayudar a mejorar el juego. Cuanto más concreto, mejor.
+  - type: textarea
+    id: que-pasa
+    attributes:
+      label: ¿Qué ha pasado?
+      description: Describe el problema.
+      placeholder: Al conquistar el territorio X, la puntuación no se actualiza…
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducirlo
+      placeholder: |
+        1. Abro el juego
+        2. Pulso en '...'
+        3. Veo el error
+    validations:
+      required: true
+  - type: input
+    id: dispositivo
+    attributes:
+      label: Dispositivo y navegador
+      placeholder: iPhone 14 · Safari  /  PC · Chrome
+    validations:
+      required: false

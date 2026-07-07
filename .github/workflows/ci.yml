@@ -1,0 +1,33 @@
+name: CI
+
+# Se ejecuta en cada push y en cada Pull Request contra main.
+# Comprueba la sintaxis del código y valida que el contenido de la
+# Constitución (169 artículos, mapa, adyacencias) está completo y coherente.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validar código y contenido
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Comprobar sintaxis de los ficheros JS
+        run: npm run check
+
+      - name: Validar los datos del juego (169 artículos, mapa)
+        run: npm test
+
+      - name: Generar el bundle de un solo archivo
+        run: npm run build

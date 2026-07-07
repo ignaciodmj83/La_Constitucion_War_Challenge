@@ -1,0 +1,32 @@
+{
+  "name": "la-constitucion-war-challenge",
+  "version": "1.0.0",
+  "description": "La Constitución: WarChallenge — juego de aprendizaje de la Constitución Española de 1978 con mecánica de mapa de conquista tipo Risk.",
+  "type": "commonjs",
+  "scripts": {
+    "serve": "node scripts/serve.js",
+    "build": "node scripts/build.js",
+    "map": "node tools/gen-map.js",
+    "test": "node tests/validate.js",
+    "check": "node --check js/data.js && node --check js/game.js && node --check js/map-data.js"
+  },
+  "keywords": [
+    "constitucion-espanola",
+    "educacion",
+    "juego",
+    "aprendizaje",
+    "risk",
+    "gamificacion",
+    "derecho-constitucional"
+  ],
+  "author": "ignaciodmj83",
+  "license": "LicenseRef-Proprietary",
+  "private": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ignaciodmj83/La_Constitucion_War_Challenge.git"
+  }
+}

@@ -1,0 +1,44 @@
+name: Desplegar web (GitHub Pages)
+
+# Publica el juego como web jugable en GitHub Pages cada vez que se
+# actualiza main. La URL será:  https://ignaciodmj83.github.io/La_Constitucion_War_Challenge/
+#
+# IMPORTANTE (se hace una sola vez): en el repositorio, ve a
+# Settings → Pages → Build and deployment → Source: "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Evita despliegues solapados
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir el sitio (todo el repositorio)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Desplegar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conquista la Constitución — juego de aprendizaje CE 1978</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
+<link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand">
+    <span class="brand-flag"></span>
+    <div class="brand-text">
+      <h1>Conquista la Constitución</h1>
+      <span class="brand-sub">Continente Constitucia · CE 1978</span>
+    </div>
+  </div>
+
+  <div class="hud">
+    <div class="hud-chip score-chip" title="Puntuación total">
+      <span class="chip-icon">🏅</span><span id="hudScore" class="chip-value">0</span>
+    </div>
+    <div class="hud-chip combo-chip" id="comboChip" title="Combo de aciertos seguidos">
+      <span class="chip-icon">🔥</span><span id="hudCombo" class="chip-value">×1</span>
+    </div>
+    <div class="hud-chip streak-chip" id="streakChip" title="Días seguidos jugando">
+      <span class="chip-icon">📅</span><span id="hudStreak" class="chip-value">1</span>
+    </div>
+    <div class="hud-rank" title="Tu rango y experiencia">
+      <div class="rank-top"><span id="hudRank">Ciudadano/a</span><span id="hudLevel" class="rank-lvl">Nv. 1</span></div>
+      <div class="xpbar"><div id="xpFill"></div></div>
+    </div>
+  </div>
+
+  <div class="topbar-actions">
+    <button id="btnAch"   class="icon-btn" title="Logros">🏆</button>
+    <button id="btnStats" class="icon-btn" title="Estadísticas">📊</button>
+    <button id="btnSound" class="icon-btn" title="Sonido">🔊</button>
+    <button id="btnHelp"  class="icon-btn" title="Cómo se juega">❓</button>
+  </div>
+</header>
+
+<main id="mapWrap">
+  <svg id="map" viewBox="0 0 1200 860" preserveAspectRatio="xMidYMid meet" role="img"
+       aria-label="Mapa del continente Constitucia, dividido en territorios de la Constitución"></svg>
+  <div id="floaters"></div>
+</main>
+
+<footer id="statusbar">
+  <div class="progress-block">
+    <span id="progressLabel">Territorios: 1/15</span>
+    <div class="terr-progress"><div id="terrFill"></div></div>
+  </div>
+  <span id="hintText" class="hint">Pulsa un territorio atacable para prepararte y conquistarlo ⚔️</span>
+  <span id="prestigeBadge" class="prestige-badge" hidden>⭐ Legislatura II</span>
+</footer>
+
+<!-- ══════════ Pre-batalla ══════════ -->
+<div id="preBattle" class="overlay" hidden>
+  <div class="card prebattle-card">
+    <button class="card-close" data-close="preBattle">✕</button>
+    <div class="pb-head">
+      <span id="pbIcon" class="pb-icon">🏛️</span>
+      <div>
+        <h2 id="pbName">Territorio</h2>
+        <span id="pbArts" class="pb-arts">Arts.</span>
+      </div>
+    </div>
+    <div id="pbFaction"></div>
+    <p id="pbDesc" class="pb-desc"></p>
+    <div id="pbMeta" class="pb-meta"></div>
+    <div class="pb-actions" id="pbActions"></div>
+  </div>
+</div>
+
+<!-- ══════════ Modo preparación (profesor) ══════════ -->
+<div id="prep" class="overlay" hidden>
+  <div class="card prep-card" id="prepColor">
+    <div class="prep-head">
+      <div class="prof">
+        <span id="prepProfEmoji" class="prof-emoji">👵</span>
+        <div>
+          <div id="prepProfName" class="prof-name">Profesor/a</div>
+          <div id="prepFaction" class="prof-faction">Facción</div>
+        </div>
+      </div>
+      <button id="prepSkip" class="flee-btn" title="Saltar la preparación">Saltar ⏭️</button>
+    </div>
+
+    <div class="prep-progress">
+      <span id="prepProgress" class="prep-count">Artículo 1 de 9</span>
+      <div id="prepDots" class="prep-dots"></div>
+    </div>
+
+    <div class="prep-body">
+      <div class="art-num" id="prepArtNum">Art. 1</div>
+      <h3 class="art-title" id="prepArtTitle">Título</h3>
+      <div id="prepScene" class="scene-wrap"></div>
+      <p id="prepExp" class="art-exp"></p>
+      <div id="prepMnemo" class="art-mnemo"></div>
+    </div>
+
+    <div class="prep-nav">
+      <button id="prepPrev" class="secondary-btn">⬅ Anterior</button>
+      <button id="prepNext" class="primary-btn">Siguiente ➜</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ Batalla ══════════ -->
+<div id="battle" class="overlay" hidden>
+  <div class="card battle-card">
+    <div class="battle-head">
+      <div class="battle-title">
+        <span id="bIcon">⚔️</span>
+        <div>
+          <h2 id="bName">Batalla</h2>
+          <span id="bMode" class="b-mode">Conquista</span>
+        </div>
+      </div>
+      <button id="bFlee" class="flee-btn" title="Retirarse">🏳️ Retirada</button>
+    </div>
+
+    <p id="bRule" class="b-rule"></p>
+
+    <div class="battle-status">
+      <div class="b-progress" id="bProgress" title="Artículos superados"></div>
+      <div class="b-counter" id="bCounter">0/0</div>
+    </div>
+
+    <div class="timerbar"><div id="timerFill"></div></div>
+
+    <div class="q-block">
+      <div id="bArtLabel" class="b-artlabel"></div>
+      <div id="bScene" class="scene-wrap small"></div>
+      <p id="qText" class="q-text"></p>
+      <div id="qOptions" class="q-options"></div>
+    </div>
+
+    <div id="qFeedback" class="q-feedback" hidden>
+      <div id="fbBanner" class="fb-banner"></div>
+      <p id="fbRef" class="fb-ref"></p>
+      <p id="fbExp" class="fb-exp"></p>
+      <div id="fbMnemo" class="fb-mnemo"></div>
+      <button id="btnNext" class="primary-btn">Continuar ➜</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ Resultado ══════════ -->
+<div id="battleEnd" class="overlay" hidden>
+  <div class="card end-card">
+    <div id="endEmoji" class="end-emoji">🎉</div>
+    <h2 id="endTitle">¡Territorio conquistado!</h2>
+    <p id="endSub" class="end-sub"></p>
+    <div id="endBreakdown" class="end-breakdown"></div>
+    <button id="btnEndRetry" class="secondary-btn" hidden>🎓 Repasar y reintentar</button>
+    <button id="btnEndOk" class="primary-btn">Al mapa 🗺️</button>
+  </div>
+</div>
+
+<!-- ══════════ Logros ══════════ -->
+<div id="achModal" class="overlay" hidden>
+  <div class="card list-card">
+    <button class="card-close" data-close="achModal">✕</button>
+    <h2>🏆 Logros</h2>
+    <div id="achList" class="ach-list"></div>
+  </div>
+</div>
+
+<!-- ══════════ Estadísticas ══════════ -->
+<div id="statsModal" class="overlay" hidden>
+  <div class="card list-card">
+    <button class="card-close" data-close="statsModal">✕</button>
+    <h2>📊 Estadísticas</h2>
+    <div id="statsList" class="stats-grid"></div>
+    <button id="btnReset" class="danger-btn">🗑️ Borrar partida y empezar de cero</button>
+  </div>
+</div>
+
+<!-- ══════════ Intro / ayuda ══════════ -->
+<div id="introModal" class="overlay" hidden>
+  <div class="card intro-card">
+    <h2>⚔️ Conquista la Constitución</h2>
+    <p class="intro-lead">La Constitución Española de 1978 es un continente, <b>Constitucia</b>. Sus 15 territorios son los títulos de la Constitución, y su tamaño depende de cuántos artículos tiene cada uno. Conquístalos todos.</p>
+    <ul class="intro-list">
+      <li><b>🎓 Prepárate:</b> cada territorio tiene un <span class="gold">profesor</span> que te explica sus artículos uno a uno, con una escena visual y un truco para recordarlos.</li>
+      <li><b>⚔️ Conquista:</b> para tomar un territorio debes responder <span class="gold">una pregunta por cada artículo</span>… y no fallar ninguna. Una sola falla detiene el ataque.</li>
+      <li><b>🔥 Combos y velocidad:</b> encadena aciertos para multiplicar puntos y responde rápido para sumar el bonus de tiempo.</li>
+      <li><b>🗺️ Expansión:</b> solo puedes atacar territorios fronterizos. Dos islas (Tribunal Constitucional y Reforma) se alcanzan por rutas marítimas.</li>
+      <li><b>🌫️ El Olvido:</b> con las horas, tus territorios se debilitan. Defiéndelos o los perderás. ¡Vuelve cada día!</li>
+    </ul>
+    <p class="intro-src">Basado en el texto de la Constitución Española
+       (<a href="https://www.boe.es/buscar/act.php?id=BOE-A-1978-31229" target="_blank" rel="noopener">BOE-A-1978-31229</a>) · 169 artículos.</p>
+    <button id="btnIntroOk" class="primary-btn big">¡A la conquista! ⚔️</button>
+  </div>
+</div>
+
+<!-- ══════════ Victoria total ══════════ -->
+<div id="victoryModal" class="overlay" hidden>
+  <div class="card victory-card">
+    <div class="end-emoji">👑</div>
+    <h2>¡Has conquistado la Constitución!</h2>
+    <p class="end-sub">Los 15 territorios de Constitucia ondean tu bandera. El pueblo español te aclama.</p>
+    <div id="victoryStats" class="end-breakdown"></div>
+    <button id="btnPrestige" class="primary-btn big">🏛️ Nueva legislatura</button>
+    <button id="btnVictoryStay" class="ghost-btn">Seguir repasando este mapa</button>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<canvas id="confetti"></canvas>
+
+<script src="js/map-data.js"></script>
+<script src="js/data.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
