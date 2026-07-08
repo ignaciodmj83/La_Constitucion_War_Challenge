@@ -72,7 +72,7 @@ function defaultState() {
     daily: { streak: 1, last: todayKey() },
     ach: [], sound: true, music: false, voice: true, seenIntro: false,
     difficulty: 'normal', lastLossTs: Date.now(),
-    stats: { answers: 0, correct: 0, conquests: 0, defenses: 0, fastest: null, prepared: 0, playMs: 0 },
+    stats: { answers: 0, correct: 0, conquests: 0, defenses: 0, fastest: null, prepared: 0, playMs: 0, mastered: {}, best: {} },
   };
 }
 function loadState() {
@@ -85,6 +85,8 @@ function loadState() {
     if (!DIFFICULTIES[s.difficulty]) s.difficulty = 'normal';
     if (!s.lastLossTs) s.lastLossTs = Date.now();
     if (typeof s.stats.playMs !== 'number') s.stats.playMs = 0;
+    if (!s.stats.mastered) s.stats.mastered = {};
+    if (!s.stats.best) s.stats.best = {};
     return s;
   } catch { return defaultState(); }
 }
@@ -583,7 +585,7 @@ function answer(btnIdx) {
   S.stats.answers++;
   const banner = $('fbBanner');
   if (correct) {
-    S.stats.correct++; combo++; S.bestCombo = Math.max(S.bestCombo, combo);
+    S.stats.correct++; S.stats.mastered[B.n] = true; combo++; S.bestCombo = Math.max(S.bestCombo, combo);
     if (combo >= 5) unlock('combo5'); if (combo >= 10) unlock('combo10'); if (combo >= 20) unlock('combo20');
     if (secs < 4) unlock('flash'); if (S.stats.correct >= 169) unlock('sabio');
     if (S.stats.fastest === null || secs < S.stats.fastest) S.stats.fastest = secs;
@@ -748,6 +750,9 @@ function confetti() {
   (function frame() { ctx.clearRect(0, 0, canvas.width, canvas.height); for (const p of parts) { p.x += p.vx; p.y += p.vy; p.rot += p.vr; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.color; ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * .6); ctx.restore(); } if (Date.now() - t0 < 2600) requestAnimationFrame(frame); else ctx.clearRect(0, 0, canvas.width, canvas.height); })();
 }
 function showVictory() {
+  const dk = S.difficulty, prev = S.stats.best[dk];
+  if (prev == null || S.stats.playMs < prev) S.stats.best[dk] = S.stats.playMs;
+  save();
   $('victoryStats').innerHTML = `
     <div class="row"><span>Puntuación</span><b>${fmt(S.score)} pts</b></div>
     <div class="row"><span>Tiempo en conquistarlo todo</span><b>${fmtDuration(S.stats.playMs)}</b></div>
@@ -771,18 +776,30 @@ function showAchievements() {
   $('achModal').hidden = false;
 }
 function showStats() {
-  const acc = S.stats.answers ? Math.round(S.stats.correct / S.stats.answers * 100) : 0;
+  const acc = S.stats.answers ? S.stats.correct / S.stats.answers : 0;
+  const mastered = Object.keys(S.stats.mastered || {}).length;
   const conts = TITULOS.filter((t) => tituloConquered(t.id)).length;
+  // Preparación para las oposiciones: cuánto dominas (artículos acertados
+  // alguna vez) pesa más, y la fiabilidad (precisión) completa la nota.
+  const readiness = Math.round(100 * (0.65 * (mastered / 169) + 0.35 * acc));
+  const level = readiness >= 85 ? '🟢 Listo para el examen' : readiness >= 60 ? '🟡 Bien encaminado' : readiness >= 30 ? '🟠 En preparación' : '🔴 Empezando';
+  const best = S.stats.best || {};
+  const bestStr = (k) => best[k] != null ? fmtDuration(best[k]) : '—';
+  const banner = `<div class="readiness">
+    <div class="rd-head"><span class="rd-title">🎓 Preparación para las oposiciones</span><span class="rd-pct">${readiness}%</span></div>
+    <div class="rd-bar"><div class="rd-fill" style="width:${Math.max(2, readiness)}%"></div></div>
+    <div class="rd-sub">${level} · dominas <b>${mastered}/169</b> artículos con un <b>${Math.round(acc * 100)}%</b> de aciertos.</div>
+    <div class="rd-times">🏁 Mejor tiempo en conquistar los 169: 🌱 ${bestStr('facil')} · ⚔️ ${bestStr('normal')} · 🔥 ${bestStr('dificil')}</div>
+  </div>`;
   const boxes = [
-    [fmt(S.score), 'Puntos'], [`Nv. ${levelFromXp(S.xp)}`, rankFor(levelFromXp(S.xp))],
-    [`${Object.keys(S.owned).filter((k) => S.owned[k]).length}/169`, 'Territorios'],
-    [`${conts}/11`, 'Títulos completos'],
-    [`${S.stats.correct}/${S.stats.answers} (${acc}%)`, 'Aciertos'], [`×${S.bestCombo}`, 'Mejor combo'],
-    [S.stats.defenses, 'Defensas'], [S.stats.fastest ? `${S.stats.fastest.toFixed(1)}s` : '—', 'Más rápida'],
-    [`${S.daily.streak} día(s)`, 'Racha'], [`${S.ach.length}/${ACHIEVEMENTS.length}`, 'Logros'],
+    [`${mastered}/169`, 'Artículos dominados'], [`${Math.round(acc * 100)}%`, 'Precisión'],
+    [`${S.stats.correct}/${S.stats.answers}`, 'Aciertos totales'], [`×${S.bestCombo}`, 'Mejor combo'],
+    [`${Object.keys(S.owned).filter((k) => S.owned[k]).length}/169`, 'Territorios ahora'], [`${conts}/11`, 'Títulos completos'],
     [fmtDuration(S.stats.playMs), 'Tiempo de juego'], [`${diff().emoji} ${diff().name}`, 'Dificultad'],
+    [S.stats.fastest ? `${S.stats.fastest.toFixed(1)}s` : '—', 'Respuesta más rápida'], [`${S.daily.streak} día(s)`, 'Racha diaria'],
+    [fmt(S.score), 'Puntos'], [`${S.ach.length}/${ACHIEVEMENTS.length}`, 'Logros'],
   ];
-  $('statsList').innerHTML = boxes.map(([v, l]) => `<div class="stat-box"><div class="s-val">${v}</div><div class="s-lbl">${l}</div></div>`).join('');
+  $('statsList').innerHTML = banner + boxes.map(([v, l]) => `<div class="stat-box"><div class="s-val">${v}</div><div class="s-lbl">${l}</div></div>`).join('');
   $('statsModal').hidden = false;
 }
 

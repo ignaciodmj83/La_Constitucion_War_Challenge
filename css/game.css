@@ -255,20 +255,29 @@ body {
 .stat-box { border: 1px solid var(--line); border-radius: 11px; background: var(--panel2); padding: 12px 14px; }
 .stat-box .s-val { font-size: 18px; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
 .stat-box .s-lbl { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.readiness { grid-column: 1 / -1; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(227,169,63,.10), rgba(255,255,255,.02)); }
+.rd-head { display: flex; justify-content: space-between; align-items: baseline; }
+.rd-title { font-weight: 800; font-size: 14px; }
+.rd-pct { font-weight: 800; font-size: 22px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.rd-bar { height: 10px; border-radius: 999px; background: #2a3850; overflow: hidden; margin: 8px 0 8px; }
+.rd-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #d24b3e, #e3a93f, #3fbf6f); transition: width .5s; }
+.rd-sub { font-size: 12.5px; color: var(--muted); } .rd-sub b { color: var(--text); }
+.rd-times { font-size: 12px; color: var(--muted); margin-top: 6px; }
 
 /* ── Índice desplegable ── */
 .index-card { width: min(680px,100%); }
 .index-sub { color: var(--muted); font-size: 13px; margin: 4px 0 12px; }
 .index-tree { max-height: 64vh; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; padding-right: 4px; }
 .ix-titulo { border: 1px solid var(--line); border-radius: 11px; background: var(--panel2); overflow: hidden; }
-.ix-titulo > summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; list-style: none; font-weight: 800; }
+.ix-titulo > summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; list-style: none; font-weight: 800; flex-wrap: nowrap; }
 .ix-titulo > summary::-webkit-details-marker { display: none; }
-.ix-titulo > summary::before { content: '▸'; color: var(--muted); font-size: 12px; transition: transform .15s; }
+.ix-titulo > summary::before { content: '▸'; color: var(--muted); font-size: 12px; transition: transform .15s; flex: none; }
 .ix-titulo[open] > summary::before { transform: rotate(90deg); }
 .ix-emblem { width: 30px; height: 30px; flex: none; display: flex; align-items: center; justify-content: center;
   font-size: 17px; border-radius: 8px; box-shadow: 0 0 0 1px rgba(0,0,0,.35), inset 0 1px 2px rgba(255,255,255,.25); }
-.ix-tname { flex: 1; }
-.ix-prog { color: var(--gold); font-variant-numeric: tabular-nums; font-size: 13px; }
+.ix-tname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ix-prog { color: var(--gold); font-variant-numeric: tabular-nums; font-size: 13px; flex: none; white-space: nowrap; }
 .ix-body { padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 3px; }
 .ix-cap { font-size: 12px; font-weight: 800; color: var(--muted); margin: 8px 4px 3px; text-transform: uppercase; letter-spacing: .3px; }
 .ix-art { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; border: none; background: transparent;
@@ -334,4 +343,22 @@ body {
   .brand-sub { display: none; } .hud-rank { min-width: 120px; } .hint { display: none; }
   .stats-grid { grid-template-columns: 1fr; } #topbar { gap: 10px; padding: 8px 10px; } .brand-text h1 { font-size: 13px; }
   #legendPanel { width: 200px; }
+}
+@media (max-width: 560px) {
+  .overlay { padding: 8px; align-items: flex-start; }
+  .card { padding: 16px 14px; max-height: 94vh; }
+  .card h2 { font-size: 17px; }
+  .list-card, .index-card, .settings-card { width: 100%; }
+  .index-tree { max-height: 74vh; }
+  .index-sub { font-size: 12px; }
+  .ix-titulo > summary { padding: 9px 10px; gap: 8px; }
+  .ix-emblem { width: 26px; height: 26px; font-size: 15px; }
+  .ix-tname { font-size: 14px; }
+  .ix-art { padding: 7px 6px; gap: 7px; }
+  .ix-art .ix-n { min-width: 46px; font-size: 13px; }
+  .ix-art .ix-emoji { font-size: 17px; width: 20px; }
+  .ix-art .ix-t { font-size: 12px; }
+  .diff-opt .diff-txt small, .set-toggle .st-txt small { font-size: 11px; }
+  #topbar .topbar-actions { gap: 2px; }
+  .icon-btn { padding: 5px 6px; }
 }
