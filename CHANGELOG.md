@@ -4,6 +4,24 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.4.0] — 2026-07-08
+
+### Cambiado (mapa, música, voz y estadísticas)
+- **Se eliminan los ríos**: los títulos con capítulos (I, III, VIII) muestran
+  ahora sus capítulos pequeños como **islas del color del reino** frente a su
+  costa, y los grandes forman el cuerpo principal. Así se ve el reino dividido
+  en varias zonas sin líneas de río.
+- **Essos** confirmado como continente ancho y horizontal; fronteras sinuosas.
+- **Música** menos monótona (progresión de 8 compases con variación) y un
+  **tema de guerra** que suena durante las conquistas y defensas.
+- **Voz "para todos los públicos"**: en los artículos estrella (los más
+  importantes para las oposiciones) la voz ya no lee el texto, sino que explica
+  con lenguaje sencillo su importancia, qué pasaría si no existiera y un
+  ejemplo. El resto usan la explicación normal.
+- **Estadísticas orientadas a oposiciones**: nota de "Preparación" (dominio de
+  artículos + precisión), artículos dominados y **mejor tiempo por dificultad**.
+- **Índice de la Constitución** arreglado en móvil.
+
 ## [2.3.0] — 2026-07-08
 
 ### Añadido

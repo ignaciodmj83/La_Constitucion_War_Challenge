@@ -127,25 +127,32 @@ const sfx = {
   tick() { tone(900, .04, 'square', 0, .05); },
 };
 
-/* ───────────────────────── Música (marcha épica, WebAudio, sin ficheros) ─────────────────────────
-   Marcha militar clásica, épica pero tranquila, generada por procedimiento:
-   bajo en marcha, redoble suave, pad de metales y una melodía en re menor
-   sobre la progresión i–VI–III–VII (heroica). */
-const music = { on: false, master: null, timer: null, next: 0, beat: 0, noise: null };
+/* ───────────────────────── Música (marcha épica + tema de guerra, WebAudio) ─────────────────────────
+   Generada por procedimiento, sin ficheros. Dos ambientes:
+   - 'march': marcha militar napoleónica, épica pero tranquila (progresión de
+     8 compases, bajo en marcha, redoble suave, pad de metales y melodía).
+   - 'battle': tema de guerra durante las conquistas (más rápido, tambores a
+     doble tiempo, bajo insistente, tensión). */
+const music = { on: false, mood: 'march', master: null, timer: null, next: 0, beat: 0, noise: null };
 const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
-const BEAT = 0.55; // ~109 BPM
-const CHORDS = [ // 1 acorde por compás, [raíz(midi), triada]
-  [50, [50, 53, 57]], // Dm
-  [46, [46, 50, 53]], // Bb
-  [53, [53, 57, 60]], // F
-  [48, [48, 52, 55]], // C
-];
-const MELODY = [ // notas por compás (índice de beat 0..3 → semitono midi o null)
-  [62, null, 65, 64], [65, null, 62, 57], [60, null, 64, 65], [67, null, 64, 62],
-];
+const PROG = {
+  march: [ // 8 compases, re menor heroico con variación
+    [50, [50, 53, 57]], [50, [50, 53, 57]], [46, [46, 50, 53]], [46, [46, 50, 53]],
+    [53, [53, 57, 60]], [57, [57, 60, 64]], [48, [48, 52, 55]], [45, [45, 48, 52]],
+  ],
+  battle: [ // 8 compases, urgente y marcial
+    [50, [50, 53, 57]], [50, [50, 53, 57]], [43, [43, 46, 50]], [45, [45, 48, 52]],
+    [50, [50, 53, 57]], [48, [48, 51, 55]], [46, [46, 50, 53]], [45, [45, 49, 52]],
+  ],
+};
+const MEL = {
+  march: [[62, null, 65, 64], [65, null, 64, 62], [57, 60, 62, null], [64, 62, 60, 57], [65, null, 69, 67], [69, 67, 65, 64], [60, 62, 64, null], [57, null, 60, 62]],
+  battle: [[62, 62, 65, 62], [69, null, 67, 65], [62, 62, 65, 67], [69, 70, 69, 67], [62, 62, 65, 62], [67, null, 65, 63], [62, 65, 69, 72], [70, 69, 67, 65]],
+};
+const beatDur = () => (music.mood === 'battle' ? 0.42 : 0.55);
 function noiseBuffer() {
   if (music.noise) return music.noise;
-  const ctx = audioCtx; const b = ctx.createBuffer(1, ctx.sampleRate * 0.4, ctx.sampleRate);
+  const ctx = audioCtx; const b = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate);
   const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   music.noise = b; return b;
 }
@@ -155,32 +162,43 @@ function mVoice(freq, t, dur, type, vol, cutoff) {
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.04); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   o.connect(f).connect(g).connect(music.master); o.start(t); o.stop(t + dur + 0.03);
 }
-function mDrum(t, vol) {
+function mDrum(t, vol, freq, dur) {
   const ctx = audioCtx; const s = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
-  s.buffer = noiseBuffer(); f.type = 'bandpass'; f.frequency.value = 1900; f.Q.value = 0.7;
-  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-  s.connect(f).connect(g).connect(music.master); s.start(t); s.stop(t + 0.14);
+  s.buffer = noiseBuffer(); f.type = 'bandpass'; f.frequency.value = freq || 1900; f.Q.value = 0.7;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + (dur || 0.12));
+  s.connect(f).connect(g).connect(music.master); s.start(t); s.stop(t + (dur || 0.12) + 0.03);
 }
 function scheduleBeat(beat, t) {
-  const bar = Math.floor(beat / 4) % CHORDS.length, bi = beat % 4;
-  const [root, triad] = CHORDS[bar];
-  if (bi === 0 || bi === 2) mVoice(midi(root - 12), t, 0.5, 'triangle', 0.18, 500); // bajo en marcha
-  if (bi === 1 || bi === 3) mDrum(t, 0.10);                                          // redoble
-  mDrum(t, 0.03);                                                                    // pulso suave
-  if (bi === 0) for (const s of triad) mVoice(midi(s), t, BEAT * 3.6, 'sawtooth', 0.035, 1100); // pad metales
-  const mel = MELODY[bar][bi]; if (mel) mVoice(midi(mel), t, BEAT * 0.9, 'square', 0.05, 2200);  // melodía
+  const mood = music.mood, prog = PROG[mood], mel = MEL[mood];
+  const bars = prog.length, bar = Math.floor(beat / 4) % bars, bi = beat % 4;
+  const [root, triad] = prog[bar]; const dur = beatDur();
+  if (mood === 'battle') {
+    mVoice(midi(root - 12), t, dur * 0.9, 'triangle', 0.19, 600);        // bajo insistente en cada tiempo
+    mDrum(t, 0.12, 1800, 0.13);                                          // tambor a doble tiempo
+    mDrum(t + dur / 2, 0.09, 1800, 0.10);
+    if (bi === 0) for (const s of triad) mVoice(midi(s), t, dur * 3.4, 'sawtooth', 0.045, 1300); // pad tenso
+    if (bi === 0 && bar % 4 === 0) mDrum(t, 0.14, 400, 0.5);             // golpe grave de frase
+  } else {
+    if (bi === 0 || bi === 2) mVoice(midi(root - 12), t, dur * 0.9, 'triangle', 0.18, 520); // bajo en marcha
+    if (bi === 1 || bi === 3) mDrum(t, 0.10, 1900, 0.12);               // redoble en contratiempo
+    mDrum(t, 0.028, 2400, 0.08);                                        // pulso suave
+    if (bi === 0) for (const s of triad) mVoice(midi(s), t, dur * 3.6, 'sawtooth', 0.035, 1100); // pad metales
+    if (bi === 0 && bar % 4 === 0) mDrum(t, 0.06, 300, 0.6);            // resonancia de frase
+  }
+  const m = mel[bar][bi]; if (m) mVoice(midi(m), t, dur * 0.9, 'square', mood === 'battle' ? 0.055 : 0.05, 2300); // melodía
 }
 function musicScheduler() {
   if (!music.on) return;
-  while (music.next < audioCtx.currentTime + 0.25) { scheduleBeat(music.beat, music.next); music.next += BEAT; music.beat++; }
+  while (music.next < audioCtx.currentTime + 0.25) { scheduleBeat(music.beat, music.next); music.next += beatDur(); music.beat++; }
   music.timer = setTimeout(musicScheduler, 30);
 }
+function setMood(m) { if (music.on && music.mood !== m) music.mood = m; }
 function startMusic() {
   if (music.on) return;
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    music.on = true; music.master = audioCtx.createGain(); music.master.gain.value = 0;
+    music.on = true; music.mood = 'march'; music.master = audioCtx.createGain(); music.master.gain.value = 0;
     music.master.connect(audioCtx.destination);
     music.master.gain.linearRampToValueAtTime(0.16, audioCtx.currentTime + 1.4);
     music.beat = 0; music.next = audioCtx.currentTime + 0.1; musicScheduler();
@@ -200,8 +218,14 @@ function speakArticle(n) {
   if (!('speechSynthesis' in window)) { toast('Tu navegador no soporta la lectura en voz alta.'); return; }
   stopVoice();
   const a = ARTICLES[n]; const t = tituloById(MAP.art.titulo[n]);
-  const marco = t.roman ? `del Título ${t.roman}, ${t.name}` : `del ${t.name}`;
-  const text = `Artículo ${n}, ${marco}. ${a.t}. ${a.e} Para recordarlo: ${a.mn}`;
+  const rich = (typeof VOZ !== 'undefined') ? VOZ[n] : null;
+  let text;
+  if (rich) {
+    text = rich; // artículo estrella: explicación sencilla (importancia, qué pasaría sin él, ejemplo)
+  } else {
+    const marco = t.roman ? `del Título ${t.roman}, ${t.name}` : `del ${t.name}`;
+    text = `Artículo ${n}, ${marco}. ${a.t}. ${a.e} Para recordarlo: ${a.mn}`;
+  }
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'es-ES'; u.rate = 1; u.pitch = 1;
   const v = pickVoice(); if (v) u.voice = v;
@@ -546,6 +570,7 @@ function prepStep(d) {
 let B = null, timerId = null;
 function startBattle(mode, arts) {
   closeAll();
+  if (mode === 'attack' || mode === 'defense') setMood('battle');
   B = { mode, arts, i: 0, answered: false, qStart: 0, earned: 0, correct: 0 };
   $('battle').hidden = false; askQuestion();
 }
@@ -638,7 +663,7 @@ function conquer(n) {
 }
 
 function endBattle(won) {
-  stopTimer(); $('battle').hidden = true;
+  stopTimer(); setMood('march'); $('battle').hidden = true;
   const rows = []; let emoji, title, sub;
   if (B.mode === 'attack') {
     // en conquista, cada acierto ya conquistó su territorio; el "fin" es informativo
