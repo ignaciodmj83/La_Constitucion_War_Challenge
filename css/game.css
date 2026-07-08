@@ -281,6 +281,34 @@ body {
 .ix-art.owned .ix-t { color: var(--text); }
 .ix-art.locked { opacity: .6; }
 
+/* ── Ajustes ── */
+.settings-card { width: min(560px,100%); }
+.settings-body { display: flex; flex-direction: column; gap: 18px; margin-top: 10px; }
+.set-section h3 { font-size: 13px; margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.diff-opts { display: flex; flex-direction: column; gap: 7px; }
+.diff-opt { display: flex; align-items: center; gap: 12px; text-align: left; border: 1px solid var(--line); background: var(--panel2);
+  color: var(--text); padding: 11px 13px; border-radius: 11px; cursor: pointer; font: inherit; }
+.diff-opt.sel { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.diff-opt .diff-emoji { font-size: 24px; flex: none; }
+.diff-opt .diff-txt { flex: 1; display: flex; flex-direction: column; }
+.diff-opt .diff-txt b { font-size: 14px; } .diff-opt .diff-txt small { color: var(--muted); font-size: 12px; margin-top: 1px; }
+.diff-opt .diff-check { color: var(--gold); font-weight: 800; flex: none; width: 16px; text-align: center; }
+.set-toggle { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border: 1px solid var(--line);
+  background: var(--panel2); color: var(--text); padding: 11px 13px; border-radius: 11px; cursor: pointer; font: inherit; margin-bottom: 7px; }
+.set-toggle .st-icon { font-size: 22px; flex: none; }
+.set-toggle .st-txt { flex: 1; display: flex; flex-direction: column; }
+.set-toggle .st-txt b { font-size: 14px; } .set-toggle .st-txt small { color: var(--muted); font-size: 12px; margin-top: 1px; }
+.set-toggle .st-sw { flex: none; width: 42px; height: 24px; border-radius: 999px; background: #33425a; position: relative; transition: background .2s; }
+.set-toggle.on .st-sw { background: var(--gold); }
+.set-toggle .st-knob { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .2s; }
+.set-toggle.on .st-knob { left: 21px; }
+
+/* botón de voz */
+.speak-btn { display: inline-flex; align-items: center; gap: 6px; margin: 4px auto 10px; padding: 7px 14px; font-size: 13px; font-weight: 700;
+  border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 999px; cursor: pointer; }
+.speak-btn:hover { border-color: var(--gold); color: var(--gold); }
+.q-feedback .speak-btn { margin: 2px 0 8px; }
+
 /* ── Intro ── */
 .intro-card { width: min(640px,100%); }
 .intro-lead { color: var(--muted); font-size: 14.5px; line-height: 1.55; margin: 6px 0 14px; }

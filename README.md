@@ -74,6 +74,8 @@ preparación.
 - ⚔️ **Conquista** territorio a territorio: responde la pregunta del artículo y es tuyo.
 - 🪖 **Guarniciones temáticas** por continente (Guardia Real, Los Togados, Mercaderes…).
 - 🔥 Combos, 🎖️ rangos, 🏆 14 logros, 👑 modo prestigio, 📅 racha diaria y 🌫️ repaso espaciado.
+- ⚙️ **Dificultad** elegible (Fácil/Normal/Difícil, con pérdida de territorios por horas en Difícil), ⏱️ **tiempo de juego** en las estadísticas y 🗂️ **índice desplegable** de toda la Constitución.
+- 🎼 **Música** de marcha épica y 🗣️ **voz** que lee cada artículo (todo generado en el navegador, sin ficheros).
 - 💾 Guardado automático en el navegador · 🔊 sonido y 🎉 confeti · **sin conexión**.
 
 ## Jugar en tu ordenador

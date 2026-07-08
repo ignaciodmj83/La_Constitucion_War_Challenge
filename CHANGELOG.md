@@ -4,6 +4,34 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.3.0] — 2026-07-08
+
+### Añadido
+- **Música de fondo** tipo marcha militar épica (estilo napoleónico), generada
+  por procedimiento con WebAudio (bajo en marcha, redoble, pad de metales y
+  melodía en re menor sobre progresión heroica), sin ficheros ni dependencias.
+- **Voz del artículo**: botón 🗣️ que lee en voz alta el artículo (título,
+  significado y truco) con la Web Speech API del navegador.
+- **Niveles de dificultad** seleccionables (Fácil / Normal / Difícil) que
+  ajustan el tiempo de respuesta por pregunta, el ritmo de El Olvido y —en
+  Difícil— la **pérdida de 1 territorio por cada hora jugada**.
+- **Tiempo de juego** acumulado en estadísticas y en la pantalla de victoria
+  (cuánto se tarda en conquistarlo todo).
+- Nueva pantalla de **Ajustes** (⚙️) con dificultad, música, efectos y voz.
+
+### Cambiado (rediseño del mapa y de los artículos)
+- **Essos** pasa a ser un continente **ancho y horizontal** a la derecha (antes
+  vertical), fiel a la disposición del mapa de Juego de Tronos; Poniente sigue
+  alto y estrecho a la izquierda.
+- **Fronteras sinuosas** de territorios y reinos mediante un campo de ruido
+  (domain warp): ya no son rectas.
+- Las **montañas se sustituyen por ríos**, y los ríos se **recortan al
+  interior**: nunca se meten en el mar.
+- Cada reino muestra un **emblema grande y distintivo**; la leyenda y el nuevo
+  **índice desplegable** (títulos → capítulos → artículos) llevan ese símbolo.
+- Cada artículo se representa con **un único escudo heráldico** (color del reino
+  + símbolo de su palabra clave), en vez de la suma de tres emojis.
+
 ## [2.2.0] — 2026-07-07
 
 ### Cambiado (dos continentes y fronteras orgánicas)

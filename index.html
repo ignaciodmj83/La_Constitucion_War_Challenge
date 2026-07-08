@@ -30,6 +30,7 @@
     <button id="btnIndex" class="icon-btn" title="Índice de la Constitución">🗂️</button>
     <button id="btnAch" class="icon-btn" title="Logros">🏆</button>
     <button id="btnStats" class="icon-btn" title="Estadísticas">📊</button>
+    <button id="btnSettings" class="icon-btn" title="Ajustes (dificultad, música, voz)">⚙️</button>
     <button id="btnSound" class="icon-btn" title="Sonido">🔊</button>
     <button id="btnHelp" class="icon-btn" title="Cómo se juega">❓</button>
   </div>
@@ -93,6 +94,7 @@
       <h3 class="art-title" id="prepArtTitle"></h3>
       <div id="prepScene" class="scene-wrap"></div>
       <p id="prepExp" class="art-exp"></p>
+      <button id="prepSpeak" class="speak-btn" title="Escuchar la explicación">🗣️ Escuchar el artículo</button>
       <div id="prepMnemo" class="art-mnemo"></div>
     </div>
     <div class="prep-nav"><button id="prepPrev" class="secondary-btn">⬅ Anterior</button><button id="prepNext" class="primary-btn">Siguiente ➜</button></div>
@@ -120,6 +122,7 @@
       <div id="fbBanner" class="fb-banner"></div>
       <p id="fbRef" class="fb-ref"></p>
       <p id="fbExp" class="fb-exp"></p>
+      <button id="fbSpeak" class="speak-btn" title="Escuchar la explicación">🗣️ Escuchar el artículo</button>
       <div id="fbMnemo" class="fb-mnemo"></div>
       <button id="btnNext" class="primary-btn">Continuar ➜</button>
     </div>
@@ -147,6 +150,15 @@
 <div id="statsModal" class="overlay" hidden>
   <div class="card list-card"><button class="card-close" data-close="statsModal">✕</button><h2>📊 Estadísticas</h2><div id="statsList" class="stats-grid"></div>
     <button id="btnReset" class="danger-btn">🗑️ Borrar partida y empezar de cero</button></div>
+</div>
+
+<!-- Ajustes -->
+<div id="settingsModal" class="overlay" hidden>
+  <div class="card list-card settings-card">
+    <button class="card-close" data-close="settingsModal">✕</button>
+    <h2>⚙️ Ajustes</h2>
+    <div id="settingsBody" class="settings-body"></div>
+  </div>
 </div>
 
 <!-- Índice de la Constitución -->

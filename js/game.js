@@ -13,14 +13,22 @@
 /* ───────────────────────── Constantes ───────────────────────── */
 
 const SAVE_KEY = 'ce78_warchallenge_v3';
-const QUESTION_SECONDS = 30;
 const BASE_POINTS = 100;
 const TIME_BONUS_PER_S = 3;
 const COMBO_STEP = 0.15;
 const COMBO_MAX = 5;
-const DECAY_HOURS_BASE = 24;
 const INCOME_TICK_MS = 12000;
 const MEMORY_DANGER = 30;
+
+/* Niveles de dificultad: tiempo de respuesta, ritmo de El Olvido y pérdida
+   de territorios con el tiempo real. */
+const DIFFICULTIES = {
+  facil:   { name: 'Fácil',   emoji: '🌱', secs: 45, decayH: 48, loseEveryMin: 0,   desc: '45 s por pregunta · sin pérdidas por el paso del tiempo.' },
+  normal:  { name: 'Normal',  emoji: '⚔️', secs: 30, decayH: 24, loseEveryMin: 0,   desc: '30 s por pregunta · El Olvido moderado.' },
+  dificil: { name: 'Difícil', emoji: '🔥', secs: 20, decayH: 12, loseEveryMin: 60,  desc: '20 s por pregunta · pierdes 1 territorio cada hora que juegas.' },
+};
+function diff() { return DIFFICULTIES[S.difficulty] || DIFFICULTIES.normal; }
+function qSeconds() { return diff().secs; }
 
 const RANKS = [
   [1, 'Ciudadano/a'], [4, 'Elector/a'], [8, 'Concejal/a'], [12, 'Alcalde/sa'],
@@ -62,8 +70,9 @@ function defaultState() {
     mem,                                // tid -> último refresco (El Olvido)
     score: 0, xp: 0, bestCombo: 0, prestige: 0,
     daily: { streak: 1, last: todayKey() },
-    ach: [], sound: true, seenIntro: false,
-    stats: { answers: 0, correct: 0, conquests: 0, defenses: 0, fastest: null, prepared: 0 },
+    ach: [], sound: true, music: false, voice: true, seenIntro: false,
+    difficulty: 'normal', lastLossTs: Date.now(),
+    stats: { answers: 0, correct: 0, conquests: 0, defenses: 0, fastest: null, prepared: 0, playMs: 0 },
   };
 }
 function loadState() {
@@ -73,6 +82,9 @@ function loadState() {
     const s = { ...defaultState(), ...JSON.parse(raw) };
     if (!s.owned || !s.owned[1]) s.owned = { ...(s.owned || {}), 1: true };
     for (const t of TITULOS) if (!s.mem[t.id]) s.mem[t.id] = Date.now();
+    if (!DIFFICULTIES[s.difficulty]) s.difficulty = 'normal';
+    if (!s.lastLossTs) s.lastLossTs = Date.now();
+    if (typeof s.stats.playMs !== 'number') s.stats.playMs = 0;
     return s;
   } catch { return defaultState(); }
 }
@@ -113,9 +125,90 @@ const sfx = {
   tick() { tone(900, .04, 'square', 0, .05); },
 };
 
+/* ───────────────────────── Música (marcha épica, WebAudio, sin ficheros) ─────────────────────────
+   Marcha militar clásica, épica pero tranquila, generada por procedimiento:
+   bajo en marcha, redoble suave, pad de metales y una melodía en re menor
+   sobre la progresión i–VI–III–VII (heroica). */
+const music = { on: false, master: null, timer: null, next: 0, beat: 0, noise: null };
+const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
+const BEAT = 0.55; // ~109 BPM
+const CHORDS = [ // 1 acorde por compás, [raíz(midi), triada]
+  [50, [50, 53, 57]], // Dm
+  [46, [46, 50, 53]], // Bb
+  [53, [53, 57, 60]], // F
+  [48, [48, 52, 55]], // C
+];
+const MELODY = [ // notas por compás (índice de beat 0..3 → semitono midi o null)
+  [62, null, 65, 64], [65, null, 62, 57], [60, null, 64, 65], [67, null, 64, 62],
+];
+function noiseBuffer() {
+  if (music.noise) return music.noise;
+  const ctx = audioCtx; const b = ctx.createBuffer(1, ctx.sampleRate * 0.4, ctx.sampleRate);
+  const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  music.noise = b; return b;
+}
+function mVoice(freq, t, dur, type, vol, cutoff) {
+  const ctx = audioCtx; const o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+  o.type = type; o.frequency.value = freq; f.type = 'lowpass'; f.frequency.value = cutoff || 1800;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.04); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(f).connect(g).connect(music.master); o.start(t); o.stop(t + dur + 0.03);
+}
+function mDrum(t, vol) {
+  const ctx = audioCtx; const s = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+  s.buffer = noiseBuffer(); f.type = 'bandpass'; f.frequency.value = 1900; f.Q.value = 0.7;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+  s.connect(f).connect(g).connect(music.master); s.start(t); s.stop(t + 0.14);
+}
+function scheduleBeat(beat, t) {
+  const bar = Math.floor(beat / 4) % CHORDS.length, bi = beat % 4;
+  const [root, triad] = CHORDS[bar];
+  if (bi === 0 || bi === 2) mVoice(midi(root - 12), t, 0.5, 'triangle', 0.18, 500); // bajo en marcha
+  if (bi === 1 || bi === 3) mDrum(t, 0.10);                                          // redoble
+  mDrum(t, 0.03);                                                                    // pulso suave
+  if (bi === 0) for (const s of triad) mVoice(midi(s), t, BEAT * 3.6, 'sawtooth', 0.035, 1100); // pad metales
+  const mel = MELODY[bar][bi]; if (mel) mVoice(midi(mel), t, BEAT * 0.9, 'square', 0.05, 2200);  // melodía
+}
+function musicScheduler() {
+  if (!music.on) return;
+  while (music.next < audioCtx.currentTime + 0.25) { scheduleBeat(music.beat, music.next); music.next += BEAT; music.beat++; }
+  music.timer = setTimeout(musicScheduler, 30);
+}
+function startMusic() {
+  if (music.on) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    music.on = true; music.master = audioCtx.createGain(); music.master.gain.value = 0;
+    music.master.connect(audioCtx.destination);
+    music.master.gain.linearRampToValueAtTime(0.16, audioCtx.currentTime + 1.4);
+    music.beat = 0; music.next = audioCtx.currentTime + 0.1; musicScheduler();
+  } catch { music.on = false; }
+}
+function stopMusic() {
+  if (!music.on) return; music.on = false; if (music.timer) clearTimeout(music.timer);
+  try { music.master.gain.cancelScheduledValues(audioCtx.currentTime); music.master.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5); } catch { /* */ }
+}
+
+/* ───────────────────────── Voz (explica el artículo, Web Speech API) ───────────────────────── */
+function stopVoice() { try { window.speechSynthesis && speechSynthesis.cancel(); } catch { /* */ } }
+function pickVoice() {
+  try { const vs = speechSynthesis.getVoices(); return vs.find((v) => /es[-_]ES/i.test(v.lang)) || vs.find((v) => /^es/i.test(v.lang)) || null; } catch { return null; }
+}
+function speakArticle(n) {
+  if (!('speechSynthesis' in window)) { toast('Tu navegador no soporta la lectura en voz alta.'); return; }
+  stopVoice();
+  const a = ARTICLES[n]; const t = tituloById(MAP.art.titulo[n]);
+  const marco = t.roman ? `del Título ${t.roman}, ${t.name}` : `del ${t.name}`;
+  const text = `Artículo ${n}, ${marco}. ${a.t}. ${a.e} Para recordarlo: ${a.mn}`;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'es-ES'; u.rate = 1; u.pitch = 1;
+  const v = pickVoice(); if (v) u.voice = v;
+  try { speechSynthesis.speak(u); } catch { /* */ }
+}
+
 /* ───────────────────────── El Olvido / niveles ───────────────────────── */
 
-function decayHours() { return Math.max(8, DECAY_HOURS_BASE - S.prestige * 3); }
+function decayHours() { return Math.max(6, diff().decayH - S.prestige * 3); }
 function memoryOf(tid) {
   const owned = artsOfTitulo(tid).filter((n) => S.owned[n]).length;
   if (owned === 0) return 100;
@@ -428,6 +521,7 @@ function renderPrepCard() {
   $('prepArtTitle').textContent = a.t;
   $('prepScene').innerHTML = sceneHTML(a, num);
   $('prepExp').textContent = a.e;
+  $('prepSpeak').hidden = !S.voice; stopVoice();
   $('prepMnemo').innerHTML = `<span class="mnemo-tag">💡 Truco para recordarlo</span>${a.mn}`;
   $('prepPrev').disabled = PREP.i === 0;
   const last = PREP.i === total - 1;
@@ -454,6 +548,7 @@ function startBattle(mode, arts) {
   $('battle').hidden = false; askQuestion();
 }
 function askQuestion() {
+  stopVoice();
   const n = B.arts[B.i]; const a = ARTICLES[n]; const tid = MAP.art.titulo[n]; const t = tituloById(tid);
   B.n = n; B.a = a; B.answered = false;
   const order = shuffle(a.o.map((_, i) => i)); B.correctBtn = order.indexOf(a.c);
@@ -470,9 +565,9 @@ function askQuestion() {
   $('qFeedback').hidden = true; startTimer(); B.qStart = Date.now();
 }
 function startTimer() {
-  stopTimer(); const fill = $('timerFill'); fill.className = ''; const t0 = Date.now();
+  stopTimer(); const fill = $('timerFill'); fill.className = ''; const t0 = Date.now(); const QS = qSeconds();
   timerId = setInterval(() => {
-    const left = QUESTION_SECONDS - (Date.now() - t0) / 1000; const pct = Math.max(0, left / QUESTION_SECONDS * 100);
+    const left = QS - (Date.now() - t0) / 1000; const pct = Math.max(0, left / QS * 100);
     fill.style.width = `${pct}%`; fill.className = pct < 20 ? 'crit' : pct < 45 ? 'warn' : '';
     if (left <= 5.2 && left > 5.0) sfx.tick();
     if (left <= 0) { stopTimer(); answer(-1); }
@@ -482,7 +577,7 @@ function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null; } 
 
 function answer(btnIdx) {
   if (!B || B.answered) return; B.answered = true; stopTimer();
-  const secs = (Date.now() - B.qStart) / 1000; const remaining = Math.max(0, QUESTION_SECONDS - secs);
+  const secs = (Date.now() - B.qStart) / 1000; const remaining = Math.max(0, qSeconds() - secs);
   const correct = btnIdx === B.correctBtn; const opts = $('qOptions').children;
   for (const o of opts) o.disabled = true;
   S.stats.answers++;
@@ -511,6 +606,7 @@ function answer(btnIdx) {
   }
   $('fbRef').textContent = `📜 Art. ${B.n} CE · ${B.a.t}`;
   $('fbExp').textContent = B.a.e;
+  $('fbSpeak').hidden = !S.voice;
   $('fbMnemo').innerHTML = `💡 ${B.a.mn}`;
   $('qFeedback').hidden = false; renderHud(); refreshMap(); save();
   const last = B.i >= B.arts.length - 1;
@@ -582,7 +678,7 @@ function openPreBattle(n) {
 
   if (st === 'attackable') {
     $('pbDesc').textContent = `Territorio enemigo. Responde su pregunta para conquistarlo.`;
-    $('pbMeta').innerHTML = `<span class="meta-chip">⏱️ ${QUESTION_SECONDS}s</span><span class="meta-chip">${prepared ? '🎓 Preparado' : '📖 Sin preparar'}</span>`;
+    $('pbMeta').innerHTML = `<span class="meta-chip">⏱️ ${qSeconds()}s</span><span class="meta-chip">${prepared ? '🎓 Preparado' : '📖 Sin preparar'}</span>`;
     const prep = document.createElement('button'); prep.className = prepared ? 'secondary-btn' : 'primary-btn';
     prep.innerHTML = `🎓 ${prepared ? 'Repasar' : 'Prepararme'} · ${meta.name}`;
     prep.addEventListener('click', () => startPrep(islandId)); actions.appendChild(prep);
@@ -622,7 +718,28 @@ function incomeTick() {
   if (gain > 0) { S.score += gain; renderHud(); const w = $('mapWrap').getBoundingClientRect(); floater(`+${gain} 🏳️`, w.width - 120, 20); save(); }
   // El Olvido: si un título llega a memoria 0, pierde algunos territorios
   for (const t of TITULOS) if (artsOfTitulo(t.id).some((n) => S.owned[n]) && memoryOf(t.id) <= 0) { forgetSome(t.id); toast(`🌫️ El Olvido tomó territorios de ${t.name}`, 'danger'); refreshMap(); }
+  // Dificultad difícil: pierdes 1 territorio por cada hora jugada
+  const every = diff().loseEveryMin;
+  if (every > 0) {
+    const owned = Object.keys(S.owned).filter((k) => S.owned[k] && +k !== 1);
+    while (owned.length && Date.now() - S.lastLossTs >= every * 60000) {
+      const n = +owned.splice(Math.floor(Math.random() * owned.length), 1)[0];
+      delete S.owned[n]; S.lastLossTs += every * 60000;
+      toast(`🔥 Perdiste el territorio del art. ${n} (dificultad Difícil).`, 'danger');
+      refreshMap(); save();
+    }
+    if (!owned.length) S.lastLossTs = Date.now();
+  } else { S.lastLossTs = Date.now(); }
 }
+function fmtDuration(ms) {
+  const s = Math.floor((ms || 0) / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  if (h) return `${h} h ${m} min`;
+  if (m) return `${m} min ${sec} s`;
+  return `${sec} s`;
+}
+/* contador de tiempo de juego (solo mientras la pestaña está visible) */
+let lastPlayTs = Date.now();
+function playTick() { const now = Date.now(); if (!document.hidden) S.stats.playMs = (S.stats.playMs || 0) + (now - lastPlayTs); lastPlayTs = now; }
 function confetti() {
   const canvas = $('confetti'); const ctx = canvas.getContext('2d'); canvas.width = innerWidth; canvas.height = innerHeight;
   const colors = ['#c60b1e', '#ffc400', '#e3a93f', '#fff', '#3fbf6f', '#b48cff'];
@@ -633,6 +750,8 @@ function confetti() {
 function showVictory() {
   $('victoryStats').innerHTML = `
     <div class="row"><span>Puntuación</span><b>${fmt(S.score)} pts</b></div>
+    <div class="row"><span>Tiempo en conquistarlo todo</span><b>${fmtDuration(S.stats.playMs)}</b></div>
+    <div class="row"><span>Dificultad</span><b>${diff().emoji} ${diff().name}</b></div>
     <div class="row"><span>Mejor combo</span><b>×${S.bestCombo}</b></div>
     <div class="row"><span>Aciertos</span><b>${S.stats.correct}/${S.stats.answers}</b></div>
     <div class="row total"><span>Rango</span><b>${rankFor(levelFromXp(S.xp))}</b></div>`;
@@ -646,7 +765,7 @@ function prestige() {
 }
 
 /* ───────────────────────── Modales ───────────────────────── */
-function closeAll() { for (const id of ['preBattle', 'battleEnd', 'achModal', 'statsModal', 'indexModal', 'introModal', 'victoryModal', 'prep']) $(id).hidden = true; }
+function closeAll() { stopVoice(); for (const id of ['preBattle', 'battleEnd', 'achModal', 'statsModal', 'settingsModal', 'indexModal', 'introModal', 'victoryModal', 'prep']) $(id).hidden = true; }
 function showAchievements() {
   $('achList').innerHTML = ACHIEVEMENTS.map((a) => { const g = S.ach.includes(a.id); return `<div class="ach ${g ? '' : 'locked'}"><span class="a-icon">${g ? a.icon : '🔒'}</span><div><div class="a-name">${a.name}</div><div class="a-desc">${a.desc}</div></div><span class="a-pts">${g ? '✓ ' : ''}+${a.pts}</span></div>`; }).join('');
   $('achModal').hidden = false;
@@ -661,6 +780,7 @@ function showStats() {
     [`${S.stats.correct}/${S.stats.answers} (${acc}%)`, 'Aciertos'], [`×${S.bestCombo}`, 'Mejor combo'],
     [S.stats.defenses, 'Defensas'], [S.stats.fastest ? `${S.stats.fastest.toFixed(1)}s` : '—', 'Más rápida'],
     [`${S.daily.streak} día(s)`, 'Racha'], [`${S.ach.length}/${ACHIEVEMENTS.length}`, 'Logros'],
+    [fmtDuration(S.stats.playMs), 'Tiempo de juego'], [`${diff().emoji} ${diff().name}`, 'Dificultad'],
   ];
   $('statsList').innerHTML = boxes.map(([v, l]) => `<div class="stat-box"><div class="s-val">${v}</div><div class="s-lbl">${l}</div></div>`).join('');
   $('statsModal').hidden = false;
@@ -698,12 +818,47 @@ function renderIndex() {
   }));
 }
 
+/* ───────────────────────── Ajustes (dificultad, música, efectos, voz) ───────────────────────── */
+function renderSettings() {
+  const box = $('settingsBody'); if (!box) return;
+  const diffBtns = Object.entries(DIFFICULTIES).map(([k, d]) =>
+    `<button class="diff-opt ${S.difficulty === k ? 'sel' : ''}" data-diff="${k}">
+       <span class="diff-emoji">${d.emoji}</span>
+       <span class="diff-txt"><b>${d.name}</b><small>${d.desc}</small></span>
+       <span class="diff-check">${S.difficulty === k ? '✓' : ''}</span></button>`).join('');
+  const toggle = (id, on, label, desc, icon) =>
+    `<button class="set-toggle ${on ? 'on' : ''}" data-toggle="${id}">
+       <span class="st-icon">${icon}</span>
+       <span class="st-txt"><b>${label}</b><small>${desc}</small></span>
+       <span class="st-sw"><span class="st-knob"></span></span></button>`;
+  box.innerHTML = `
+    <div class="set-section"><h3>⚔️ Dificultad</h3><div class="diff-opts">${diffBtns}</div></div>
+    <div class="set-section"><h3>🎵 Audio y voz</h3>
+      ${toggle('music', S.music, 'Música', 'Marcha épica de fondo, estilo napoleónico.', '🎼')}
+      ${toggle('sound', S.sound, 'Efectos de sonido', 'Aciertos, fallos y conquistas.', '🔊')}
+      ${toggle('voice', S.voice, 'Voz del artículo', 'Botón 🗣️ para escuchar la explicación en voz alta.', '🗣️')}
+    </div>`;
+  box.querySelectorAll('.diff-opt').forEach((b) => b.addEventListener('click', () => {
+    S.difficulty = b.dataset.diff; S.lastLossTs = Date.now(); save();
+    renderSettings(); refreshMap(); toast(`${diff().emoji} Dificultad: ${diff().name}`); sfx.click();
+  }));
+  box.querySelectorAll('.set-toggle').forEach((b) => b.addEventListener('click', () => {
+    const id = b.dataset.toggle; S[id] = !S[id]; save(); renderSettings(); renderHud();
+    if (id === 'music') { S.music ? startMusic() : stopMusic(); }
+    if (id === 'voice' && !S.voice) stopVoice();
+    sfx.click();
+  }));
+}
+
 /* ───────────────────────── Init ───────────────────────── */
 function init() {
   buildMap(); renderHud(); checkDaily();
   $('btnAch').addEventListener('click', () => { closeAll(); showAchievements(); });
   $('btnStats').addEventListener('click', () => { closeAll(); showStats(); });
   $('btnIndex').addEventListener('click', () => { closeAll(); renderIndex(); $('indexModal').hidden = false; });
+  $('btnSettings').addEventListener('click', () => { closeAll(); renderSettings(); $('settingsModal').hidden = false; });
+  $('prepSpeak').addEventListener('click', () => { if (PREP) speakArticle(PREP.arts[PREP.i]); });
+  $('fbSpeak').addEventListener('click', () => { if (B) speakArticle(B.n); });
   $('btnHelp').addEventListener('click', () => { closeAll(); $('introModal').hidden = false; });
   $('btnSound').addEventListener('click', () => { S.sound = !S.sound; renderHud(); save(); });
   $('btnIntroOk').addEventListener('click', () => { S.seenIntro = true; save(); $('introModal').hidden = true; sfx.click(); });
@@ -726,6 +881,16 @@ function init() {
   });
   setInterval(incomeTick, INCOME_TICK_MS);
   setInterval(refreshMap, 30000);
+  // tiempo de juego (solo con la pestaña visible)
+  lastPlayTs = Date.now();
+  setInterval(playTick, 1000);
+  document.addEventListener('visibilitychange', () => { lastPlayTs = Date.now(); });
+  window.addEventListener('beforeunload', () => { playTick(); stopVoice(); save(); });
+  // música: arranca al primer gesto del usuario si está activada (autoplay bloqueado sin gesto)
+  if (S.music) {
+    const kick = () => { if (S.music) startMusic(); document.removeEventListener('pointerdown', kick); };
+    document.addEventListener('pointerdown', kick);
+  }
   const params = new URLSearchParams(location.search);
   if (!S.seenIntro && !params.has('nointro')) $('introModal').hidden = false;
   const bes = TITULOS.filter((t) => artsOfTitulo(t.id).some((n) => S.owned[n]) && memoryOf(t.id) < MEMORY_DANGER);
