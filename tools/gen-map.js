@@ -1,25 +1,19 @@
 /* =========================================================================
-   Generador del mundo "Constitucia" — DOS CONTINENTES al estilo del mapa
-   de Poniente/Essos:
-     - "home" (Poniente): continente ALTO y estrecho a la izquierda, orientado
-       norte→sur. Preliminar + Título I + Título II. Aquí se empieza siempre,
-       en el norte (El Confín Helado).
-     - "far" (Essos): continente ANCHO y horizontal a la derecha, orientado
-       oeste→este. Títulos III a VIII. Se llega cruzando el mar estrecho por
-       una ruta marítima obligatoria.
-     - 2 islas (Títulos IX y X) al este de Essos.
+   Generador del mundo "Constitucia" — DOS CONTINENTES al estilo Poniente/Essos:
+     - "home" (Poniente): continente ALTO y estrecho a la izquierda (N→S).
+       Preliminar + Título I + Título II. Se empieza en el norte.
+     - "far" (Essos): continente ANCHO y horizontal a la derecha (O→E).
+       Títulos III a VIII. Se llega cruzando el mar.
 
-   Diseño:
-   1. Silueta de cada continente con un perfil de grosor a lo largo de su eje
-      (vertical para "home", horizontal para "far") y costa orgánica.
-   2. Cada TÍTULO es una REGIÓN (Voronoi ponderado por nº de artículos). Las
-      fronteras se deforman con un campo de ruido (domain warp) para que sean
-      SINUOSAS, no rectas — como el terreno real.
-   3. Si un título tiene capítulos, su región se divide en COMARCAS separadas
-      por un RÍO orgánico (curva serpenteante). El río se RECORTA al interior:
-      nunca se mete en el mar.
-   4. Cada comarca se subdivide en un TERRITORIO por artículo (Voronoi + Lloyd,
-      con el mismo domain warp → bordes sinuosos que teselan sin huecos).
+   Reinos divididos en zonas (SIN ríos):
+   - Cada título es una región contigua del continente (Voronoi ponderado,
+     fronteras sinuosas por domain warp).
+   - Los títulos con capítulos muestran sus CAPÍTULOS PEQUEÑOS (≤ SAT_MAX
+     artículos) como ISLAS del mismo color frente a su costa. Los capítulos
+     grandes forman el cuerpo principal del reino. Así se ve el reino dividido
+     en varias zonas.
+   - Los Títulos IX y X son islas propias al este de Essos.
+   - Cada capítulo se subdivide en un TERRITORIO por artículo.
 
    Produce js/map-data.js. Uso: npm run map
    ========================================================================= */
@@ -28,10 +22,11 @@ const fs = require('fs');
 const path = require('path');
 const { TITULOS } = require('../js/hierarchy.js');
 
-const W = 2300, H = 1900, STEP = 3;
+const W = 2500, H = 1900, STEP = 3;
 const nx = Math.floor(W / STEP), ny = Math.floor(H / STEP);
 const cx = (i) => i * STEP + STEP / 2;
 const cy = (j) => j * STEP + STEP / 2;
+const SAT_MAX = 5; // capítulos con ≤ 5 artículos van como islas del reino
 
 /* ── utilidades ── */
 function mulberry(seed) {
@@ -89,7 +84,7 @@ function bboxOfMask(mask) {
   return { i0, i1, j0, j1 };
 }
 
-/* ═══════════════ campo de ruido para bordes sinuosos (domain warp) ═══════════════ */
+/* ── campo de ruido → fronteras sinuosas (domain warp) ── */
 function makeValueNoise(seed, gx, gy) {
   const rnd = mulberry(seed);
   const grid = [];
@@ -109,11 +104,11 @@ function makeValueNoise(seed, gx, gy) {
 const GX = Math.round(W / 105), GY = Math.round(H / 105);
 const noiseX = makeValueNoise(717, GX, GY);
 const noiseY = makeValueNoise(919, GX, GY);
-const WARP = 19; // px de desplazamiento de las fronteras
+const WARP = 19;
 const warpX = (x, y) => x + noiseX(x, y) * WARP;
 const warpY = (x, y) => y + noiseY(x, y) * WARP;
 
-/* ═══════════════ 1. Siluetas de los dos continentes ═══════════════ */
+/* ═══════════════ 1. Siluetas de los continentes ═══════════════ */
 function makeInterp(profile) {
   return (t) => {
     for (let i = 0; i < profile.length - 1; i++) {
@@ -127,22 +122,18 @@ function makeInterp(profile) {
     return [profile[profile.length - 1][1], profile[profile.length - 1][2]];
   };
 }
-/* Perfil = [t, grosor(0..1 del grosor máximo), desvío del eje(-1..1)] a lo
-   largo del eje del continente. */
-const PROFILE_HOME = [ // Poniente: norte fino → cuello → ancho → afila al sur
+const PROFILE_HOME = [
   [0.00, 0.28, 0.00], [0.05, 0.66, 0.00], [0.13, 0.95, 0.06], [0.24, 0.85, 0.10],
   [0.33, 0.40, 0.04], [0.40, 0.48, 0.00], [0.52, 0.92, -0.06], [0.66, 1.00, 0.04],
   [0.78, 0.75, -0.04], [0.90, 0.42, 0.02], [0.97, 0.17, 0.00], [1.00, 0.05, 0.00],
 ];
-const PROFILE_FAR = [ // Essos: masa ancha, costa norte/sur irregular, afila al este
+const PROFILE_FAR = [
   [0.00, 0.52, 0.10], [0.07, 0.86, -0.04], [0.16, 0.70, -0.15], [0.26, 1.00, -0.02],
   [0.36, 0.92, 0.07], [0.46, 1.00, 0.00], [0.58, 0.86, 0.09], [0.70, 0.72, 0.00],
   [0.80, 0.80, -0.07], [0.90, 0.46, 0.00], [0.97, 0.18, 0.03], [1.00, 0.05, 0.00],
 ];
-/* cfg del continente: base + axis definen el eje; thick es el medio-grosor
-   máximo (perpendicular al eje). */
-const HOME_CFG = { id: 'home', base: [560, 30], axis: [0, 1840], thick: 340, profile: PROFILE_HOME, seed: 20260707, jitter: 10, wobble: 34 };
-const FAR_CFG = { id: 'far', base: [1075, 985], axis: [1150, 0], thick: 560, profile: PROFILE_FAR, seed: 20260808, jitter: 12, wobble: 46 };
+const HOME_CFG = { id: 'home', base: [500, 30], axis: [0, 1840], thick: 300, profile: PROFILE_HOME, seed: 20260707, jitter: 10, wobble: 30 };
+const FAR_CFG = { id: 'far', base: [1250, 985], axis: [1080, 0], thick: 560, profile: PROFILE_FAR, seed: 20260808, jitter: 12, wobble: 46 };
 
 function buildContinent(cfg) {
   const interp = makeInterp(cfg.profile);
@@ -186,8 +177,6 @@ const FAR = rasterizePoly(FAR_POLY);
 const onLand = new Uint8Array(nx * ny);
 for (let idx = 0; idx < nx * ny; idx++) onLand[idx] = (HOME.mask[idx] || FAR.mask[idx]) ? 1 : 0;
 
-/* colocación de semillas dentro de un continente por (avance a lo largo del
-   eje, desvío perpendicular). */
 function seederFor(cfg) {
   const L = Math.hypot(cfg.axis[0], cfg.axis[1]);
   const dir = [cfg.axis[0] / L, cfg.axis[1] / L];
@@ -197,36 +186,45 @@ function seederFor(cfg) {
     cfg.base[1] + cfg.axis[1] * mainFrac + perp[1] * crossFrac * cfg.thick,
   ];
 }
-
-/* ═══════════════ 2. Regiones (títulos) por Voronoi ponderado + warp ═══════════════ */
-const HOME_TITULOS = TITULOS.filter((t) => t.continent === 'home' && !t.island);
-const FAR_MAINLAND_TITULOS = TITULOS.filter((t) => t.continent === 'far' && !t.island);
-const MAINLAND_TITULOS = HOME_TITULOS.concat(FAR_MAINLAND_TITULOS);
-const ISLAND_TITULOS = TITULOS.filter((t) => t.island);
-
-const TITULO_IDS = MAINLAND_TITULOS.map((t) => t.id);
-const idIndex = {}; TITULO_IDS.forEach((id, k) => { idIndex[id] = k; });
-const tituloLabel = new Int16Array(nx * ny).fill(-1);
-
-function artCountOf(t) { return t.islands.reduce((s, is) => s + (is.arts[1] - is.arts[0] + 1), 0); }
-
 const seedHome = seederFor(HOME_CFG);
 const seedFar = seederFor(FAR_CFG);
-const SEEDS_HOME = { preliminar: seedHome(0.09, 0.00), t1: seedHome(0.50, -0.05), t2: seedHome(0.90, 0.05) };
-const SEEDS_FAR = {
+const SEEDS = {
+  preliminar: seedHome(0.09, 0.00), t1: seedHome(0.50, -0.05), t2: seedHome(0.90, 0.05),
   t3: seedFar(0.10, 0.05), t4: seedFar(0.30, -0.42), t5: seedFar(0.32, 0.45),
   t6: seedFar(0.52, -0.28), t7: seedFar(0.58, 0.46), t8: seedFar(0.82, -0.02),
 };
 
-function assignTitulosOnMask(mask, subset, seeds) {
+/* ═══════════════ clasificación de capítulos: mainland vs isla ═══════════════ */
+const capMeta = {};   // capId -> { name, tituloId, arts:[...] }
+const chapList = [];  // todos los capítulos con su clase
+for (const t of TITULOS) {
+  const chs = t.islands.map((is) => ({ id: is.id, name: is.name, tituloId: t.id, arts: artsOf(is.arts) }));
+  for (const c of chs) capMeta[c.id] = { name: c.name, tituloId: t.id, arts: c.arts };
+  if (t.island) { chs.forEach((c) => { c.cls = 'islandTitulo'; chapList.push(c); }); continue; }
+  const sorted = chs.slice().sort((a, b) => b.arts.length - a.arts.length);
+  const biggest = sorted[0].id;
+  for (const c of chs) { c.cls = (c.id !== biggest && c.arts.length <= SAT_MAX) ? 'satellite' : 'mainland'; chapList.push(c); }
+}
+const chapIndex = {}; chapList.forEach((c, k) => { chapIndex[c.id] = k; });
+function tituloOfCap(capId) { return capMeta[capId].tituloId; }
+
+/* títulos por continente y sus capítulos mainland */
+const MAINLAND_TITULOS = TITULOS.filter((t) => !t.island);
+const HOME_TITULOS = MAINLAND_TITULOS.filter((t) => t.continent === 'home');
+const FAR_TITULOS = MAINLAND_TITULOS.filter((t) => t.continent === 'far');
+function mainlandArtsOfTitulo(t) { return chapList.filter((c) => c.tituloId === t.id && c.cls === 'mainland').reduce((s, c) => s + c.arts.length, 0); }
+
+/* ═══════════════ 2. Regiones de título (Voronoi ponderado + warp) ═══════════════ */
+const tituloLabel = new Int16Array(nx * ny).fill(-1); // índice en MAINLAND_TITULOS
+const mtIndex = {}; MAINLAND_TITULOS.forEach((t, k) => { mtIndex[t.id] = k; });
+function assignTitulos(mask, subset) {
   const ids = subset.map((t) => t.id);
-  const artsMap = {}; let total = 0;
-  for (const t of subset) { const n = artCountOf(t); artsMap[t.id] = n; total += n; }
+  const target = {}; let total = 0;
+  for (const t of subset) { const n = mainlandArtsOfTitulo(t); target[t.id] = n; total += n; }
   const { i0, i1, j0, j1 } = bboxOfMask(mask);
-  let cellCount = 0;
-  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (mask[j * nx + i]) cellCount++;
-  const target = ids.map((id) => (artsMap[id] / total) * cellCount);
-  const pos = ids.map((id) => seeds[id]);
+  let cells = 0; for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (mask[j * nx + i]) cells++;
+  const tgt = ids.map((id) => (target[id] / total) * cells);
+  const pos = ids.map((id) => SEEDS[id]);
   const w = ids.map(() => 0);
   function pass() {
     const areas = ids.map(() => 0);
@@ -234,55 +232,41 @@ function assignTitulosOnMask(mask, subset, seeds) {
       const idx = j * nx + i; if (!mask[idx]) continue;
       const x = warpX(cx(i), cy(j)), y = warpY(cx(i), cy(j));
       let best = -1, bd = Infinity;
-      for (let k = 0; k < ids.length; k++) {
-        const d = (x - pos[k][0]) ** 2 + (y - pos[k][1]) ** 2 - w[k];
-        if (d < bd) { bd = d; best = k; }
-      }
-      tituloLabel[idx] = idIndex[ids[best]];
-      areas[best]++;
+      for (let k = 0; k < ids.length; k++) { const d = (x - pos[k][0]) ** 2 + (y - pos[k][1]) ** 2 - w[k]; if (d < bd) { bd = d; best = k; } }
+      tituloLabel[idx] = mtIndex[ids[best]]; areas[best]++;
     }
     return areas;
   }
-  for (let it = 0; it < 140; it++) {
-    const areas = pass();
-    for (let k = 0; k < ids.length; k++) w[k] += 850 * ((target[k] - areas[k]) / target[k]);
-  }
+  for (let it = 0; it < 140; it++) { const areas = pass(); for (let k = 0; k < ids.length; k++) w[k] += 850 * ((tgt[k] - areas[k]) / tgt[k]); }
   pass();
 }
-assignTitulosOnMask(HOME.mask, HOME_TITULOS, SEEDS_HOME);
-assignTitulosOnMask(FAR.mask, FAR_MAINLAND_TITULOS, SEEDS_FAR);
+assignTitulos(HOME.mask, HOME_TITULOS);
+assignTitulos(FAR.mask, FAR_TITULOS);
 
-/* reasignar fragmentos desconectados de un título al vecino mayoritario */
-function fixFragments(labelArr, validCells) {
+function fixFragments(labelArr, valid) {
   for (let pass = 0; pass < 8; pass++) {
     let changed = false;
-    const seen = new Int32Array(nx * ny).fill(-1);
-    const compsByLabel = {};
+    const seen = new Int32Array(nx * ny).fill(-1); const comps = {};
     for (let idx = 0; idx < nx * ny; idx++) {
-      if (!validCells(idx)) continue;
-      const a = labelArr[idx]; if (a < 0 || seen[idx] >= 0) continue;
+      if (!valid(idx)) continue; const a = labelArr[idx]; if (a < 0 || seen[idx] >= 0) continue;
       const comp = [idx]; seen[idx] = 1;
       for (let p = 0; p < comp.length; p++) {
         const c = comp[p], ci = c % nx, cj = (c / nx) | 0;
         for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-          const ni = ci + di, nj = cj + dj;
-          if (ni < 0 || nj < 0 || ni >= nx || nj >= ny) continue;
-          const nidx = nj * nx + ni;
-          if (!validCells(nidx)) continue;
+          const ni = ci + di, nj = cj + dj; if (ni < 0 || nj < 0 || ni >= nx || nj >= ny) continue;
+          const nidx = nj * nx + ni; if (!valid(nidx)) continue;
           if (labelArr[nidx] === a && seen[nidx] < 0) { seen[nidx] = 1; comp.push(nidx); }
         }
       }
-      (compsByLabel[a] = compsByLabel[a] || []).push(comp);
+      (comps[a] = comps[a] || []).push(comp);
     }
-    for (const a of Object.keys(compsByLabel)) {
-      const comps = compsByLabel[a]; if (comps.length <= 1) continue;
-      comps.sort((x, y) => y.length - x.length);
-      for (let c = 1; c < comps.length; c++) for (const idx of comps[c]) {
+    for (const a of Object.keys(comps)) {
+      const cs = comps[a]; if (cs.length <= 1) continue; cs.sort((x, y) => y.length - x.length);
+      for (let c = 1; c < cs.length; c++) for (const idx of cs[c]) {
         const ci = idx % nx, cj = (idx / nx) | 0; const votes = {};
         for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-          const ni = ci + di, nj = cj + dj;
-          if (ni < 0 || nj < 0 || ni >= nx || nj >= ny) continue;
-          const nidx = nj * nx + ni; if (!validCells(nidx)) continue;
+          const ni = ci + di, nj = cj + dj; if (ni < 0 || nj < 0 || ni >= nx || nj >= ny) continue;
+          const nidx = nj * nx + ni; if (!valid(nidx)) continue;
           const l = labelArr[nidx]; if (l >= 0 && String(l) !== a) votes[l] = (votes[l] || 0) + 1;
         }
         const best = Object.entries(votes).sort((p, q) => q[1] - p[1])[0];
@@ -294,181 +278,139 @@ function fixFragments(labelArr, validCells) {
 }
 fixFragments(tituloLabel, (idx) => onLand[idx] === 1);
 
-/* ═══════════════ tierra "profunda": ≥ RIVER_INLAND celdas de la costa ═══════════════
-   (para que los ríos no se metan en el mar). */
-const RIVER_INLAND = 9;
-let deepLand = onLand;
-for (let r = 0; r < RIVER_INLAND; r++) {
-  const next = new Uint8Array(nx * ny);
-  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-    const idx = j * nx + i; if (!deepLand[idx]) continue;
-    let keep = true;
-    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const ni = i + di, nj = j + dj;
-      if (ni < 0 || nj < 0 || ni >= nx || nj >= ny || !deepLand[nj * nx + ni]) { keep = false; break; }
-    }
-    next[idx] = keep ? 1 : 0;
-  }
-  deepLand = next;
-}
-
-/* ═══════════════ 3. Comarcas de capítulo: río orgánico (curva primero) ═══════════════ */
-const capLabel = {}; // tituloId -> { label, order, axis, curves, alongMin, alongMax }
-const capMeta = {};  // capId -> { name, tituloId, arts:[...] }
-
-function sliceIntoChapterBandsOrganic(tid, tIndex) {
-  const t = TITULOS.find((x) => x.id === tid);
-  const cellIdxs = [];
-  for (let idx = 0; idx < nx * ny; idx++) if (onLand[idx] && tituloLabel[idx] === tIndex) cellIdxs.push(idx);
-  const label = new Int16Array(nx * ny).fill(-1);
-
-  if (t.islands.length === 1) {
-    for (const idx of cellIdxs) label[idx] = 0;
-    capMeta[t.islands[0].id] = { name: t.islands[0].name, tituloId: tid, arts: artsOf(t.islands[0].arts) };
-    capLabel[tid] = { label, order: [t.islands[0].id] };
-    return;
-  }
-
+/* ═══════════════ 3a. capítulos mainland dentro de cada título ═══════════════ */
+const chapLabel = new Int32Array(nx * ny).fill(-1); // índice en chapList
+function subdivideMainland(t) {
+  const tIdx = mtIndex[t.id];
+  const chaps = chapList.filter((c) => c.tituloId === t.id && c.cls === 'mainland');
+  const cells = []; for (let idx = 0; idx < nx * ny; idx++) if (onLand[idx] && tituloLabel[idx] === tIdx) cells.push(idx);
+  if (chaps.length === 1) { for (const idx of cells) chapLabel[idx] = chapIndex[chaps[0].id]; return; }
+  // Voronoi ponderado entre capítulos mainland, semillas repartidas en la región
   let minX = W, maxX = 0, minY = H, maxY = 0;
-  for (const idx of cellIdxs) { const i = idx % nx, j = (idx / nx) | 0; const x = cx(i), y = cy(j); if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
-  const axis = (maxY - minY) >= (maxX - minX) ? 'y' : 'x';
-  const cutCoord = (idx) => { const i = idx % nx, j = (idx / nx) | 0; return axis === 'y' ? cy(j) : cx(i); };
-  const alongCoord = (idx) => { const i = idx % nx, j = (idx / nx) | 0; return axis === 'y' ? cx(i) : cy(j); };
-  const cutMin = axis === 'y' ? minY : minX, cutMax = axis === 'y' ? maxY : maxX;
-  const alongMin = axis === 'y' ? minX : minY, alongMax = axis === 'y' ? maxX : maxY;
-
-  const sorted = cellIdxs.slice().sort((a, b) => cutCoord(a) - cutCoord(b));
-  const totalArts = t.islands.reduce((s, is) => s + (is.arts[1] - is.arts[0] + 1), 0);
-
-  const baselines = [];
-  let cursor = 0;
-  for (let k = 0; k < t.islands.length - 1; k++) {
-    const n = t.islands[k].arts[1] - t.islands[k].arts[0] + 1;
-    cursor += Math.round((n / totalArts) * sorted.length);
-    const c = Math.min(Math.max(cursor, 1), sorted.length - 1);
-    baselines.push(cutCoord(sorted[c]));
-  }
-
-  const bounds = [cutMin, ...baselines, cutMax];
-  let minGap = Infinity;
-  for (let k = 0; k < bounds.length - 1; k++) minGap = Math.min(minGap, bounds[k + 1] - bounds[k]);
-  const amp = Math.max(2, minGap * 0.34);
-
-  const seedBase = 5000 + tIndex * 191;
-  const curves = baselines.map((base, k) => {
-    const rnd = mulberry(seedBase + k * 37);
-    const harmonics = [];
-    for (let h = 0; h < 3; h++) {
-      const freq = 1 + h * 1.6 + rnd() * 0.7;
-      const a = amp * (0.55 - h * 0.15);
-      harmonics.push({ freq, phase: rnd() * Math.PI * 2, amp: a });
+  for (const idx of cells) { const i = idx % nx, j = (idx / nx) | 0; const x = cx(i), y = cy(j); if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+  const total = chaps.reduce((s, c) => s + c.arts.length, 0);
+  const pos = chaps.map((c, k) => [minX + (maxX - minX) * ((k + 0.5) / chaps.length), (minY + maxY) / 2]);
+  const w = chaps.map(() => 0);
+  const target = chaps.map((c) => (c.arts.length / total) * cells.length);
+  function pass() {
+    const areas = chaps.map(() => 0); const assign = new Int32Array(cells.length);
+    for (let c = 0; c < cells.length; c++) {
+      const i = cells[c] % nx, j = (cells[c] / nx) | 0; const x = warpX(cx(i), cy(j)), y = warpY(cx(i), cy(j));
+      let best = 0, bd = Infinity;
+      for (let k = 0; k < chaps.length; k++) { const d = (x - pos[k][0]) ** 2 + (y - pos[k][1]) ** 2 - w[k]; if (d < bd) { bd = d; best = k; } }
+      assign[c] = best; areas[best]++;
     }
-    const fn = (u) => harmonics.reduce((s, hh) => s + Math.sin(u * Math.PI * 2 * hh.freq + hh.phase) * hh.amp, 0);
-    return { base, fn };
-  });
-  const uOf = (v) => (v - alongMin) / ((alongMax - alongMin) || 1);
-  const curveVal = (curve, alongVal) => curve.base + curve.fn(uOf(alongVal));
-
-  for (const idx of cellIdxs) {
-    const cc = cutCoord(idx), ac = alongCoord(idx);
-    let band = 0;
-    for (const curve of curves) if (cc > curveVal(curve, ac)) band++;
-    label[idx] = Math.min(band, t.islands.length - 1);
+    return { areas, assign };
   }
-
-  const order = [];
-  t.islands.forEach((is) => { capMeta[is.id] = { name: is.name, tituloId: tid, arts: artsOf(is.arts) }; order.push(is.id); });
-  capLabel[tid] = { label, order, axis, curves, alongMin, alongMax, tIndex };
+  let last;
+  for (let it = 0; it < 60; it++) { last = pass(); for (let k = 0; k < chaps.length; k++) w[k] += 500 * ((target[k] - last.areas[k]) / target[k]); }
+  last = pass();
+  for (let c = 0; c < cells.length; c++) chapLabel[cells[c]] = chapIndex[chaps[last.assign[c]].id];
 }
-TITULO_IDS.forEach((tid, k) => sliceIntoChapterBandsOrganic(tid, k));
+for (const t of MAINLAND_TITULOS) subdivideMainland(t);
+fixFragments(chapLabel, (idx) => chapLabel[idx] >= 0);
 
-/* ═══════════════ islas (Títulos IX y X), al este de Essos ═══════════════ */
+/* ═══════════════ 3b. islas: capítulos satélite (color del reino) + Títulos IX/X ═══════════════ */
+const COAST_GAP_CELLS = 13;
+function dilate(src, times) {
+  let cur = src;
+  for (let r = 0; r < times; r++) {
+    const next = new Uint8Array(nx * ny);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const idx = j * nx + i; if (cur[idx]) { next[idx] = 1; continue; }
+      let near = false;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const ni = i + di, nj = j + dj; if (ni >= 0 && nj >= 0 && ni < nx && nj < ny && cur[nj * nx + ni]) { near = true; break; } }
+      next[idx] = near ? 1 : 0;
+    }
+    cur = next;
+  }
+  return cur;
+}
+const occupied = Uint8Array.from(dilate(onLand, COAST_GAP_CELLS)); // sitios prohibidos para islas
+const TOTAL_MAINLAND_ARTS = MAINLAND_TITULOS.reduce((s, t) => s + mainlandArtsOfTitulo(t), 0);
+const UNIT = (HOME.count + FAR.count) * STEP * STEP / TOTAL_MAINLAND_ARTS;
+
 function blobPolygon(ccx, ccy, r, seed) {
-  const rnd = mulberry(seed);
-  const n = 22, pts = [];
+  const rnd = mulberry(seed); const n = 22, pts = [];
   for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; const jr = 0.80 + rnd() * 0.36; pts.push([ccx + Math.cos(a) * r * jr, ccy + Math.sin(a) * r * jr]); }
   return chaikin(pts);
 }
-const COAST_GAP_CELLS = 14;
-let nearCoast = onLand;
-for (let r = 0; r < COAST_GAP_CELLS; r++) {
-  const next = new Uint8Array(nx * ny);
-  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-    const idx = j * nx + i;
-    if (nearCoast[idx]) { next[idx] = 1; continue; }
-    let near = false;
-    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const ni = i + di, nj = j + dj;
-      if (ni >= 0 && nj >= 0 && ni < nx && nj < ny && nearCoast[nj * nx + ni]) { near = true; break; }
-    }
-    next[idx] = near ? 1 : 0;
+function fits(ccx, ccy, r) {
+  const rr = r * 1.28;
+  const i0 = Math.floor((ccx - rr) / STEP), i1 = Math.ceil((ccx + rr) / STEP);
+  const j0 = Math.floor((ccy - rr) / STEP), j1 = Math.ceil((ccy + rr) / STEP);
+  if (i0 < 1 || j0 < 1 || i1 >= nx - 1 || j1 >= ny - 1) return false;
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+    if ((cx(i) - ccx) ** 2 + (cy(j) - ccy) ** 2 <= rr * rr && occupied[j * nx + i]) return false;
   }
-  nearCoast = next;
+  return true;
 }
-
-const FAR_ARTS_TOTAL = FAR_MAINLAND_TITULOS.reduce((s, t) => s + artCountOf(t), 0);
-const UNIT_FAR = (FAR.count * STEP * STEP) / FAR_ARTS_TOTAL;
-const ISLAND_CENTERS = { t9: [2045, 380], t10: [2170, 1510] };
-const islandCellLabel = new Int16Array(nx * ny).fill(-1);
-for (let k = 0; k < ISLAND_TITULOS.length; k++) {
-  const t = ISLAND_TITULOS[k];
-  const arts = t.islands[0].arts[1] - t.islands[0].arts[0] + 1;
-  const area = arts * UNIT_FAR;
-  const r = Math.sqrt(area / Math.PI) * 1.12;
-  const c = ISLAND_CENTERS[t.id];
-  const poly = blobPolygon(c[0], c[1], r, 9000 + k * 77);
-  const i0 = Math.max(0, Math.floor((c[0] - r * 1.4) / STEP)), i1 = Math.min(nx - 1, Math.ceil((c[0] + r * 1.4) / STEP));
-  const j0 = Math.max(0, Math.floor((c[1] - r * 1.4) / STEP)), j1 = Math.min(ny - 1, Math.ceil((c[1] + r * 1.4) / STEP));
-  const label = new Int16Array(nx * ny).fill(-1);
+function placeBlob(anchor, r, seed) {
+  if (fits(anchor[0], anchor[1], r)) return [anchor[0], anchor[1]];
+  const rnd = mulberry(seed);
+  for (let dist = STEP * 3; dist < 1600; dist += STEP * 3) {
+    const a0 = rnd() * Math.PI * 2;
+    for (let a = 0; a < 30; a++) {
+      const ang = a0 + a * (Math.PI * 2 / 30);
+      const c = [anchor[0] + Math.cos(ang) * dist, anchor[1] + Math.sin(ang) * dist];
+      if (fits(c[0], c[1], r)) return c;
+    }
+  }
+  return null;
+}
+const ISLAND_ANCHORS = { t9: [2320, 360], t10: [2360, 1520] }; // Títulos IX/X al este de Essos
+const islandBlobs = chapList.filter((c) => c.cls === 'satellite' || c.cls === 'islandTitulo')
+  .sort((a, b) => b.arts.length - a.arts.length);
+for (const c of islandBlobs) {
+  const r = Math.sqrt((c.arts.length * UNIT) / Math.PI) * 1.12;
+  const anchor = c.cls === 'islandTitulo' ? ISLAND_ANCHORS[c.tituloId] : SEEDS[c.tituloId];
+  const center = placeBlob(anchor, r, 4200 + chapIndex[c.id] * 131);
+  if (!center) { console.error('¡Isla sin sitio!', c.id); continue; }
+  const poly = blobPolygon(center[0], center[1], r, 9000 + chapIndex[c.id] * 77);
+  const i0 = Math.max(0, Math.floor((center[0] - r * 1.4) / STEP)), i1 = Math.min(nx - 1, Math.ceil((center[0] + r * 1.4) / STEP));
+  const j0 = Math.max(0, Math.floor((center[1] - r * 1.4) / STEP)), j1 = Math.min(ny - 1, Math.ceil((center[1] + r * 1.4) / STEP));
   let placed = 0;
   for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-    const idx = j * nx + i;
-    if (nearCoast[idx] || islandCellLabel[idx] >= 0) continue;
-    if (inPoly(cx(i), cy(j), poly)) { islandCellLabel[idx] = k; label[idx] = 0; placed++; }
+    const idx = j * nx + i; if (occupied[idx] || onLand[idx]) continue;
+    if (inPoly(cx(i), cy(j), poly)) { chapLabel[idx] = chapIndex[c.id]; placed++; }
   }
-  if (placed === 0) console.error(`¡Isla ${t.id} sin celdas! Ajusta ISLAND_CENTERS.`);
-  capMeta[t.islands[0].id] = { name: t.islands[0].name, tituloId: t.id, arts: artsOf(t.islands[0].arts) };
-  capLabel[t.id] = { label, order: [t.islands[0].id] };
+  if (!placed) { console.error('¡Isla sin celdas!', c.id); continue; }
+  // marcar como ocupado (disco r + separación) para que las siguientes islas no se peguen
+  const gr = r + COAST_GAP_CELLS * STEP;
+  const gi0 = Math.max(0, Math.floor((center[0] - gr) / STEP)), gi1 = Math.min(nx - 1, Math.ceil((center[0] + gr) / STEP));
+  const gj0 = Math.max(0, Math.floor((center[1] - gr) / STEP)), gj1 = Math.min(ny - 1, Math.ceil((center[1] + gr) / STEP));
+  for (let j = gj0; j <= gj1; j++) for (let i = gi0; i <= gi1; i++) if ((cx(i) - center[0]) ** 2 + (cy(j) - center[1]) ** 2 <= gr * gr) occupied[j * nx + i] = 1;
 }
 
 /* ═══════════════ 4. Territorios (un artículo por celda-capítulo) + warp ═══════════════ */
 const artLabel = new Int32Array(nx * ny).fill(-1);
 let seedCounter = 1;
-function rasterizeArticlesInCap(capId, tid) {
-  const meta = capMeta[capId];
-  const arts = meta.arts;
-  const { label } = capLabel[tid];
-  const cellIdxs = []; const capIndex = capLabel[tid].order.indexOf(capId);
-  for (let idx = 0; idx < nx * ny; idx++) if (label[idx] === capIndex) cellIdxs.push(idx);
-  if (!cellIdxs.length) { console.error('¡Capítulo sin celdas!', capId); return; }
-
-  if (arts.length === 1) { for (const idx of cellIdxs) artLabel[idx] = arts[0]; return; }
-
+function rasterizeArticles(cap) {
+  const arts = cap.arts; const ci = chapIndex[cap.id];
+  const cells = []; for (let idx = 0; idx < nx * ny; idx++) if (chapLabel[idx] === ci) cells.push(idx);
+  if (!cells.length) { console.error('¡Capítulo sin celdas!', cap.id); return; }
+  if (arts.length === 1) { for (const idx of cells) artLabel[idx] = arts[0]; return; }
   const rnd = mulberry(seedCounter++ * 733 + 11);
-  let seeds = arts.map(() => { const c = cellIdxs[Math.floor(rnd() * cellIdxs.length)]; return [cx(c % nx), cy((c / nx) | 0)]; });
-  const assign = new Array(cellIdxs.length).fill(0);
+  let seeds = arts.map(() => { const c = cells[Math.floor(rnd() * cells.length)]; return [cx(c % nx), cy((c / nx) | 0)]; });
+  const assign = new Array(cells.length).fill(0);
   for (let it = 0; it < 12; it++) {
-    for (let c = 0; c < cellIdxs.length; c++) {
-      const i = cellIdxs[c] % nx, j = (cellIdxs[c] / nx) | 0;
-      const x = warpX(cx(i), cy(j)), y = warpY(cx(i), cy(j));
+    for (let c = 0; c < cells.length; c++) {
+      const i = cells[c] % nx, j = (cells[c] / nx) | 0; const x = warpX(cx(i), cy(j)), y = warpY(cx(i), cy(j));
       let best = 0, bd = Infinity;
       for (let s = 0; s < seeds.length; s++) { const d = (x - seeds[s][0]) ** 2 + (y - seeds[s][1]) ** 2; if (d < bd) { bd = d; best = s; } }
       assign[c] = best;
     }
     const sx = seeds.map(() => 0), sy = seeds.map(() => 0), sn = seeds.map(() => 0);
-    for (let c = 0; c < cellIdxs.length; c++) { const k = assign[c]; const i = cellIdxs[c] % nx, j = (cellIdxs[c] / nx) | 0; sx[k] += cx(i); sy[k] += cy(j); sn[k]++; }
+    for (let c = 0; c < cells.length; c++) { const k = assign[c]; const i = cells[c] % nx, j = (cells[c] / nx) | 0; sx[k] += cx(i); sy[k] += cy(j); sn[k]++; }
     for (let s = 0; s < seeds.length; s++) if (sn[s]) seeds[s] = [sx[s] / sn[s], sy[s] / sn[s]];
   }
-  for (let c = 0; c < cellIdxs.length; c++) artLabel[cellIdxs[c]] = arts[assign[c]];
+  for (let c = 0; c < cells.length; c++) artLabel[cells[c]] = arts[assign[c]];
 }
-for (const tid of Object.keys(capLabel)) for (const capId of capLabel[tid].order) rasterizeArticlesInCap(capId, tid);
+for (const c of chapList) rasterizeArticles(c);
 
-/* reasignar fragmentos desconectados de un artículo */
 function fixArtFragments() {
   for (let pass = 0; pass < 8; pass++) {
-    let changed = false;
-    const seen = new Int32Array(nx * ny).fill(-1);
-    const compsByArt = {};
+    let changed = false; const seen = new Int32Array(nx * ny).fill(-1); const comps = {};
     for (let idx = 0; idx < nx * ny; idx++) {
       const a = artLabel[idx]; if (a < 0 || seen[idx] >= 0) continue;
       const comp = [idx]; seen[idx] = 1;
@@ -476,16 +418,14 @@ function fixArtFragments() {
         const c = comp[p], ci = c % nx, cj = (c / nx) | 0;
         for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
           const ni = ci + di, nj = cj + dj; if (ni < 0 || nj < 0 || ni >= nx || nj >= ny) continue;
-          const nidx = nj * nx + ni;
-          if (artLabel[nidx] === a && seen[nidx] < 0) { seen[nidx] = 1; comp.push(nidx); }
+          const nidx = nj * nx + ni; if (artLabel[nidx] === a && seen[nidx] < 0) { seen[nidx] = 1; comp.push(nidx); }
         }
       }
-      (compsByArt[a] = compsByArt[a] || []).push(comp);
+      (comps[a] = comps[a] || []).push(comp);
     }
-    for (const a of Object.keys(compsByArt)) {
-      const comps = compsByArt[a]; if (comps.length <= 1) continue;
-      comps.sort((x, y) => y.length - x.length);
-      for (let c = 1; c < comps.length; c++) for (const idx of comps[c]) {
+    for (const a of Object.keys(comps)) {
+      const cs = comps[a]; if (cs.length <= 1) continue; cs.sort((x, y) => y.length - x.length);
+      for (let c = 1; c < cs.length; c++) for (const idx of cs[c]) {
         const ci = idx % nx, cj = (idx / nx) | 0; const votes = {};
         for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
           const ni = ci + di, nj = cj + dj; if (ni < 0 || nj < 0 || ni >= nx || nj >= ny) continue;
@@ -500,7 +440,7 @@ function fixArtFragments() {
 }
 fixArtFragments();
 
-/* ═══════════════ marching squares (paths de artículo) ═══════════════ */
+/* ═══════════════ marching squares ═══════════════ */
 function contourFor(labelArr, val) {
   const at = (i, j) => (i >= 0 && j >= 0 && i < nx && j < ny && labelArr[j * nx + i] === val) ? 1 : 0;
   const segs = new Map(); const key = (p) => `${p[0]},${p[1]}`;
@@ -545,7 +485,7 @@ for (let n = 1; n <= 169; n++) {
 
 /* islandOf / tituloOf por artículo */
 const islandOf = {}, tituloOf = {};
-for (const tid of Object.keys(capLabel)) for (const capId of capLabel[tid].order) for (const n of capMeta[capId].arts) { islandOf[n] = capId; tituloOf[n] = tid; }
+for (const c of chapList) for (const n of c.arts) { islandOf[n] = c.id; tituloOf[n] = c.tituloId; }
 
 /* ═══════════════ adyacencia terrestre ═══════════════ */
 const adj = {}; for (let n = 1; n <= 169; n++) adj[n] = new Set();
@@ -557,90 +497,69 @@ for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
   }
 }
 
-/* ═══════════════ rutas marítimas: cruce home↔far + 2 islas ═══════════════ */
+/* ═══════════════ rutas marítimas: cruce home↔far + islas de cada reino ═══════════════ */
 const seaRoutes = [];
 function nearestPair(a, b) { let best = null, bd = Infinity; for (const x of a) for (const y of b) { const d = (artCenter[x][0] - artCenter[y][0]) ** 2 + (artCenter[x][1] - artCenter[y][1]) ** 2; if (d < bd) { bd = d; best = [x, y]; } } return best; }
 function addSea(a, b) { adj[a].add(b); adj[b].add(a); seaRoutes.push([a, b]); }
 function reachableFrom(start) { const seen = new Set([start]); const st = [start]; while (st.length) { const c = st.pop(); for (const m of adj[c]) if (!seen.has(m)) { seen.add(m); st.push(m); } } return seen; }
-
 const START_ART = TITULOS.find((t) => t.start).islands[0].arts[0];
+function artsOfTituloMainland(tid) { const r = []; for (const c of chapList) if (c.tituloId === tid && c.cls === 'mainland') r.push(...c.arts); return r; }
+
+// 1) cruce obligatorio home→far
 {
   const reach = reachableFrom(START_ART);
-  const farArts = []; for (const t of FAR_MAINLAND_TITULOS) for (const is of t.islands) for (const n of artsOf(is.arts)) farArts.push(n);
-  if (!farArts.some((n) => reach.has(n))) {
-    const pair = nearestPair([...reach], farArts);
-    if (pair) addSea(pair[0], pair[1]);
-  }
+  const farArts = []; for (const t of FAR_TITULOS) farArts.push(...artsOfTituloMainland(t.id));
+  if (!farArts.some((n) => reach.has(n))) { const p = nearestPair([...reach], farArts); if (p) addSea(p[0], p[1]); }
 }
-for (const t of ISLAND_TITULOS) {
-  const islArts = capMeta[t.islands[0].id].arts;
-  const reach = reachableFrom(START_ART);
-  if (islArts.some((n) => reach.has(n))) continue;
-  const pair = nearestPair([...reach], islArts);
-  if (pair) addSea(pair[0], pair[1]);
+// 2) cada isla-capítulo (satélite) se une a su propio reino
+for (const c of chapList) {
+  if (c.cls !== 'satellite') continue;
+  const parentMain = artsOfTituloMainland(c.tituloId); if (!parentMain.length) continue;
+  const already = reachableFrom(START_ART); if (c.arts.some((n) => already.has(n))) continue;
+  const p = nearestPair(parentMain, c.arts); if (p) addSea(p[0], p[1]);
 }
+// 3) Títulos IX/X (islas propias) al conjunto alcanzable
+for (const c of chapList) {
+  if (c.cls !== 'islandTitulo') continue;
+  const reach = reachableFrom(START_ART); if (c.arts.some((n) => reach.has(n))) continue;
+  const p = nearestPair([...reach], c.arts); if (p) addSea(p[0], p[1]);
+}
+// 4) red de seguridad
 let guard = 0;
-while (guard++ < 20) {
-  const reach = reachableFrom(START_ART);
-  if (reach.size === 169) break;
+while (guard++ < 30) {
+  const reach = reachableFrom(START_ART); if (reach.size === 169) break;
   const outside = []; for (let n = 1; n <= 169; n++) if (!reach.has(n)) outside.push(n);
-  const pair = nearestPair([...reach], outside);
-  if (!pair) break;
-  addSea(pair[0], pair[1]);
+  const p = nearestPair([...reach], outside); if (!p) break; addSea(p[0], p[1]);
 }
 
-/* ═══════════════ ríos decorativos: la curva ES la frontera, recortada al interior ═══════════════ */
-const chapterBorders = [];
-for (const t of MAINLAND_TITULOS) {
-  if (t.islands.length <= 1 || !t.chapterDivider) continue;
-  const capInfo = capLabel[t.id];
-  const { axis, curves, alongMin, alongMax, tIndex } = capInfo;
-  for (const curve of curves) {
-    const steps = 140, raw = [];
-    for (let s = 0; s <= steps; s++) {
-      const u = s / steps;
-      const alongVal = alongMin + (alongMax - alongMin) * u;
-      const cutVal = curve.base + curve.fn(u);
-      raw.push(axis === 'y' ? [alongVal, cutVal] : [cutVal, alongVal]);
-    }
-    // recortar al interior "profundo" y al propio título → nunca toca el mar
-    const ok = raw.map(([x, y]) => {
-      const i = Math.floor(x / STEP), j = Math.floor(y / STEP);
-      if (i < 0 || j < 0 || i >= nx || j >= ny) return false;
-      const idx = j * nx + i;
-      return deepLand[idx] === 1 && tituloLabel[idx] === tIndex;
-    });
-    // quedarnos con la tirada contigua más larga de puntos válidos
-    let bestA = -1, bestB = -1, a = -1;
-    for (let s = 0; s <= steps; s++) {
-      if (ok[s] && a < 0) a = s;
-      if ((!ok[s] || s === steps) && a >= 0) { const b = ok[s] ? s : s - 1; if (b - a > bestB - bestA) { bestA = a; bestB = b; } a = -1; }
-    }
-    if (bestA < 0 || bestB - bestA < 4) continue; // sin tramo interior suficiente
-    let chain = raw.slice(bestA, bestB + 1);
-    chain = chaikin(chain, false); chain = chaikin(chain, false);
-    const d = 'M' + chain.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join('L');
-    chapterBorders.push({ tituloId: t.id, style: 'river', name: t.dividerName, path: d });
-  }
+/* ═══════════════ centro de etiqueta del reino (cuerpo principal) ═══════════════ */
+const tituloLabelCenter = {};
+for (const t of TITULOS) {
+  const main = t.island ? t.islands.flatMap((is) => artsOf(is.arts)) : artsOfTituloMainland(t.id);
+  const arts = main.length ? main : t.islands.flatMap((is) => artsOf(is.arts));
+  let sx = 0, sy = 0, c = 0; for (const n of arts) if (artCenter[n]) { sx += artCenter[n][0]; sy += artCenter[n][1]; c++; }
+  tituloLabelCenter[t.id] = c ? [Math.round(sx / c), Math.round(sy / c)] : [0, 0];
 }
 
 /* ═══════════════ informe ═══════════════ */
 const reachFinal = reachableFrom(START_ART);
 console.log('Artículos:', Object.keys(artPath).length, '| conexos desde art.', START_ART, ':', reachFinal.size, '/169');
-console.log('Continente home (Poniente): celdas=', HOME.count, '| far (Essos): celdas=', FAR.count);
-console.log('Rutas marítimas (cruce + islas):', seaRoutes.length, '| ríos:', chapterBorders.length);
+console.log('Home celdas=', HOME.count, '| Far celdas=', FAR.count, '| UNIT=', Math.round(UNIT));
+const sats = chapList.filter((c) => c.cls === 'satellite').length, isl = chapList.filter((c) => c.cls === 'islandTitulo').length;
+console.log('Islas-capítulo (satélites):', sats, '| Islas-título:', isl, '| rutas marítimas:', seaRoutes.length);
 for (const t of TITULOS) {
-  const n = artCountOf(t);
-  console.log(`  ${(t.roman || 'Prel.').padEnd(5)} ${t.name.slice(0, 26).padEnd(26)} arts=${String(n).padStart(2)} capítulos=${t.islands.length} continente=${t.continent || '-'}${t.island ? ' (isla)' : ''}`);
+  const cs = chapList.filter((c) => c.tituloId === t.id);
+  const desc = cs.map((c) => `${c.cls === 'satellite' ? '🏝' : c.cls === 'islandTitulo' ? '🏝' : '▪'}${c.arts.length}`).join(' ');
+  console.log(`  ${(t.roman || 'Prel.').padEnd(5)} ${t.name.slice(0, 24).padEnd(24)} ${desc}`);
 }
 
 /* ═══════════════ salida ═══════════════ */
 const adjOut = {}; for (let n = 1; n <= 169; n++) adjOut[n] = [...adj[n]].sort((a, b) => a - b);
 const islandsOut = {}; for (const [id, m] of Object.entries(capMeta)) islandsOut[id] = { name: m.name, tituloId: m.tituloId, center: artCenter[m.arts[Math.floor(m.arts.length / 2)]] || [0, 0], arts: m.arts };
-const titulosOut = {}; for (const t of TITULOS) titulosOut[t.id] = { name: t.name, theme: t.theme, color: t.color, roman: t.roman, emblem: t.emblem || t.faction.unit, islands: t.islands.map((is) => is.id), continent: t.continent || null };
+const titulosOut = {}; for (const t of TITULOS) titulosOut[t.id] = { name: t.name, theme: t.theme, color: t.color, roman: t.roman, emblem: t.emblem || t.faction.unit, islands: t.islands.map((is) => is.id), continent: t.continent || null, labelCenter: tituloLabelCenter[t.id] };
 
-const out = `/* Generado por tools/gen-map.js — mundo Constitucia (Poniente + Essos, 169 territorios) */
-const MAP = ${JSON.stringify({ view: [W, H], art: { path: artPath, center: artCenter, island: islandOf, titulo: tituloOf }, islands: islandsOut, titulos: titulosOut, adj: adjOut, seaRoutes, chapterBorders }, null, 0)};
+const out = `/* Generado por tools/gen-map.js — mundo Constitucia (Poniente + Essos, reinos con islas, 169 territorios) */
+const MAP = ${JSON.stringify({ view: [W, H], art: { path: artPath, center: artCenter, island: islandOf, titulo: tituloOf }, islands: islandsOut, titulos: titulosOut, adj: adjOut, seaRoutes, chapterBorders: [] }, null, 0)};
 if (typeof module !== 'undefined') module.exports = { MAP };
 `;
 fs.writeFileSync(path.join(__dirname, '..', 'js', 'map-data.js'), out);
@@ -649,8 +568,7 @@ fs.writeFileSync(path.join(__dirname, '..', 'js', 'map-data.js'), out);
 let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#0a1a28"/>`;
 for (const [a, b] of seaRoutes) svg += `<line x1="${artCenter[a][0]}" y1="${artCenter[a][1]}" x2="${artCenter[b][0]}" y2="${artCenter[b][1]}" stroke="#3a5568" stroke-width="2" stroke-dasharray="4 6"/>`;
 for (let n = 1; n <= 169; n++) { if (!artPath[n]) continue; const col = titulosOut[tituloOf[n]].color; svg += `<path d="${artPath[n]}" fill="${col}" fill-opacity="0.9" stroke="#0a1a28" stroke-width="1"/>`; }
-for (const cb of chapterBorders) svg += `<path d="${cb.path}" fill="none" stroke="#5fc7e0" stroke-width="5" stroke-linecap="round" opacity="0.9"/>`;
-for (const t of TITULOS) { const c = islandsOut[t.islands[0].id].center; svg += `<text x="${c[0]}" y="${c[1]}" font-size="46" text-anchor="middle" font-family="sans-serif">${t.emblem || ''}</text>`; }
+for (const t of TITULOS) { const c = titulosOut[t.id].labelCenter; svg += `<text x="${c[0]}" y="${c[1]}" font-size="46" text-anchor="middle" font-family="sans-serif">${t.emblem || ''}</text>`; }
 svg += '</svg>';
 fs.writeFileSync(path.join(__dirname, 'preview.svg'), svg);
 console.log('✓ map-data.js y preview.svg generados');

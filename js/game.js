@@ -44,7 +44,7 @@ const ACHIEVEMENTS = [
   { id: 'combo20', icon: '☄️', name: 'Fuerza imparable',       desc: 'Encadena 20 aciertos seguidos.', pts: 1200 },
   { id: 'flash',   icon: '⚡', name: 'Reflejos de jurista',    desc: 'Acierta una pregunta en menos de 4 segundos.', pts: 200 },
   { id: 'cont1',   icon: '🏛️', name: 'Primer continente',      desc: 'Conquista un título entero.', pts: 500 },
-  { id: 'archi',   icon: '🏞️', name: 'Cruza fronteras',         desc: 'Conquista un título completo dividido por río o cordillera.', pts: 800 },
+  { id: 'archi',   icon: '🏝️', name: 'Señor de las islas',       desc: 'Conquista un reino completo formado por tierra e islas.', pts: 800 },
   { id: 'derechos', icon: '🕊️', name: 'Guardián de derechos',  desc: 'Conquista el Título I completo (46 artículos).', pts: 1500 },
   { id: 'defender', icon: '🛡️', name: 'Defensor del Pueblo',   desc: 'Defiende con éxito un título de El Olvido.', pts: 400 },
   { id: 'sabio',   icon: '🦉', name: 'Constitucionalista',     desc: 'Responde correctamente 169 preguntas.', pts: 1500 },
@@ -333,9 +333,8 @@ function buildMap() {
   // emblema grande de cada reino (título), en el centro de su región
   const labels = svgEl('g', { id: 'labels' });
   for (const t of TITULOS) {
-    const arts = artsOfTitulo(t.id);
-    let sx = 0, sy = 0; for (const n of arts) { sx += MAP.art.center[n][0]; sy += MAP.art.center[n][1]; }
-    const c = [sx / arts.length, sy / arts.length];
+    let c = MAP.titulos[t.id].labelCenter;
+    if (!c) { const arts = artsOfTitulo(t.id); let sx = 0, sy = 0; for (const n of arts) { sx += MAP.art.center[n][0]; sy += MAP.art.center[n][1]; } c = [sx / arts.length, sy / arts.length]; }
     const g = svgEl('g', { class: 'clabel', 'data-tid': t.id });
     g.appendChild(svgEl('circle', { cx: c[0], cy: c[1], r: 36, class: 'emblem-bg' }));
     const em = svgEl('text', { x: c[0], y: c[1], class: 'c-emblem' });
@@ -464,9 +463,10 @@ function renderLegend() {
     const arts = artsOfTitulo(t.id); const owned = arts.filter((n) => S.owned[n]).length;
     const done = owned === arts.length;
     const bes = arts.some((n) => S.owned[n]) && memoryOf(t.id) < MEMORY_DANGER;
-    const divIcon = t.island ? '🏝️' : t.chapterDivider === 'river' ? '🌊' : t.chapterDivider === 'mountains' ? '⛰️' : '';
+    const multi = t.islands.length > 1;
+    const divIcon = (t.island || multi) ? '🏝️' : '';
     const emblem = MAP.titulos[t.id].emblem || t.emblem || t.faction.unit;
-    return `<button class="leg-row ${done ? 'done' : ''}" data-tid="${t.id}" title="${t.theme}${t.chapterDivider ? ` (dividido por ${t.dividerName})` : ''}">
+    return `<button class="leg-row ${done ? 'done' : ''}" data-tid="${t.id}" title="${t.theme}${multi ? ' · reino con islas (capítulos)' : ''}">
       <span class="leg-emblem" style="background:${t.color}">${emblem}</span>
       <span class="leg-name">${t.roman ? t.roman + '. ' : ''}${t.name}</span>
       <span class="leg-prog">${divIcon ? divIcon + ' ' : ''}${bes ? '🌫️ ' : ''}${owned}/${arts.length}${done ? ' ✓' : ''}</span>
