@@ -31,8 +31,10 @@ Al abrir la app eliges entre varios modos de estudiar la Constitución:
 
 - ⚔️ **Conquista** — el mapa tipo *Risk* descrito abajo.
 - 🃏 **Memorión** — una galería con los 169 números de artículo; pulsas uno y
-  aciertas de qué trata eligiendo de una lista breve.
-- 🔜 Dos modos más en camino.
+  aciertas de qué trata eligiendo de una lista breve (con niveles de dificultad).
+- 🏛️ **Tribunal** — simulación del Tribunal Constitucional: sé abogado/a o
+  juez/a en casos reales anclados a artículos concretos.
+- 🔜 Un modo más en camino.
 
 ## ¿Qué es esto?
 

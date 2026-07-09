@@ -142,7 +142,9 @@
   /* ── cableado ── */
   menu.querySelectorAll('.game-card[data-game]').forEach((b) => b.addEventListener('click', () => {
     const g = b.dataset.game; sfxSafe('click');
-    if (g === 'risk') startRisk(); else if (g === 'memoria') startMemoria();
+    if (g === 'risk') startRisk();
+    else if (g === 'memoria') startMemoria();
+    else if (g === 'tribunal' && typeof startTribunal === 'function') { $('memoria').hidden = true; startTribunal(); }
   }));
   $('memBack').addEventListener('click', () => { $('memoria').hidden = true; showMenu(); sfxSafe('click'); });
   const mqClose = $('memQuiz').querySelector('.card-close');

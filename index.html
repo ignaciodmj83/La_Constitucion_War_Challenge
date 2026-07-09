@@ -30,11 +30,11 @@
         <span class="gc-desc">Galería de artículos: pulsa un número y acierta de qué trata.</span>
         <span class="gc-go">Jugar ▸</span>
       </button>
-      <button class="game-card soon" disabled>
-        <span class="gc-emoji">🧩</span>
-        <span class="gc-name">Próximamente</span>
-        <span class="gc-desc">Nuevo modo de estudio en camino.</span>
-        <span class="gc-go">Muy pronto</span>
+      <button class="game-card" data-game="tribunal">
+        <span class="gc-emoji">🏛️</span>
+        <span class="gc-name">Tribunal</span>
+        <span class="gc-desc">Simulación del Tribunal Constitucional: sé abogado/a o juez/a en casos reales.</span>
+        <span class="gc-go">Jugar ▸</span>
       </button>
       <button class="game-card soon" disabled>
         <span class="gc-emoji">⏱️</span>
@@ -65,6 +65,18 @@
     <div class="mq-prompt">¿De qué trata este artículo?</div>
     <div id="mqOptions" class="mq-options"></div>
   </div>
+</div>
+
+<!-- Juego 3: Tribunal -->
+<div id="tribunal" class="game-screen" hidden>
+  <header class="mem-top">
+    <button id="tribBack" class="mem-back" title="Volver al menú">⬅️ Menú</button>
+    <div class="mem-heading">🏛️ Tribunal</div>
+    <div class="trib-role" id="tribRole"></div>
+    <div class="mem-prog"><span id="tribProg">Caso 1</span></div>
+  </header>
+  <div class="mem-diffbar" id="tribModeBar"></div>
+  <div id="tribStage" class="trib-stage"></div>
 </div>
 
 <header id="topbar">
@@ -264,6 +276,7 @@
 <script src="js/data.js"></script>
 <script src="js/voz.js"></script>
 <script src="js/game.js"></script>
+<script src="js/tribunal.js"></script>
 <script src="js/juegos.js"></script>
 </body>
 </html>

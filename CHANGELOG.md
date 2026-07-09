@@ -4,6 +4,20 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.6.0] — 2026-07-09
+
+### Añadido (Juego 3: Tribunal)
+- **Tribunal**: simulación del Tribunal Constitucional con casos reales. Dos
+  versiones:
+  · **⚖️ Abogado/a**: defiendes o acusas y eliges el mejor alegato, fundado en
+    la Constitución.
+  · **👨‍⚖️ Juez/a**: dictas el fallo (veredicto + fundamento) correcto.
+  Cada caso está anclado a artículos reales, con explicación al responder;
+  acertar marca esos artículos como estudiados (suma a la "Preparación").
+  10 casos (igualdad, libertad de información, detención, domicilio, libertad
+  religiosa, educación, presunción de inocencia, irretroactividad, reunión,
+  reserva de ley).
+
 ## [2.5.2] — 2026-07-09
 
 ### Cambiado (contorno del mapa más natural)
