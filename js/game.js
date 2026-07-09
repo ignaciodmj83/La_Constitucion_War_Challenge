@@ -224,7 +224,7 @@ function speakArticle(n) {
     text = rich; // artículo estrella: explicación sencilla (importancia, qué pasaría sin él, ejemplo)
   } else {
     const marco = t.roman ? `del Título ${t.roman}, ${t.name}` : `del ${t.name}`;
-    text = `Artículo ${n}, ${marco}. ${a.t}. ${a.e} Para recordarlo: ${a.mn}`;
+    text = `Artículo ${n}, ${marco}. ${a.t}. ${a.e}`;
   }
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'es-ES'; u.rate = 1; u.pitch = 1;
@@ -506,21 +506,22 @@ function renderLegend() {
 /* ───────────────────────── Escudo pictórico del artículo ─────────────────────────
    Una única imagen: un escudo heráldico con el color del reino y el símbolo
    que representa la palabra clave del artículo (primer emoji de su escena). */
-function crestSVG(emoji, color) {
+function crestSVG(num, emoji, color) {
   const id = 'cg' + Math.random().toString(36).slice(2, 8);
   const top = lighten(color, 0.30), bot = darken(color, 0.30);
-  return `<svg class="crest" viewBox="0 0 100 116" role="img" aria-hidden="true">
+  return `<svg class="crest" viewBox="0 0 100 120" role="img" aria-hidden="true">
     <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bot}"/></linearGradient></defs>
     <path class="crest-shield" d="M50 4 L94 18 L94 54 Q94 92 50 112 Q6 92 6 54 L6 18 Z" fill="url(#${id})"/>
     <path class="crest-inner" d="M50 12 L88 24 L88 54 Q88 86 50 103 Q12 86 12 54 L12 24 Z" fill="none"/>
-    <text class="crest-emoji" x="50" y="54" text-anchor="middle" dominant-baseline="central">${emoji}</text>
+    <text class="crest-num" x="50" y="30" text-anchor="middle" dominant-baseline="central">${num}</text>
+    <text class="crest-emoji" x="50" y="68" text-anchor="middle" dominant-baseline="central">${emoji}</text>
   </svg>`;
 }
 function sceneHTML(a, n) {
   const col = (n && MAP.art.titulo[n]) ? MAP.titulos[MAP.art.titulo[n]].color : '#8a93a8';
   const emoji = (a.img && a.img[0]) || '📜';
-  return `<div class="crest-wrap">${crestSVG(emoji, col)}</div>`;
+  return `<div class="crest-wrap">${crestSVG(n || '', emoji, col)}</div>`;
 }
 
 /* ───────────────────────── Preparación (profesor) ───────────────────────── */
@@ -544,7 +545,6 @@ function renderPrepCard() {
   $('prepScene').innerHTML = sceneHTML(a, num);
   $('prepExp').textContent = a.e;
   $('prepSpeak').hidden = !S.voice; stopVoice();
-  $('prepMnemo').innerHTML = `<span class="mnemo-tag">💡 Truco para recordarlo</span>${a.mn}`;
   $('prepPrev').disabled = PREP.i === 0;
   const last = PREP.i === total - 1;
   $('prepNext').textContent = last ? '¡Listo! ⚔️' : 'Siguiente ➜';
@@ -630,7 +630,6 @@ function answer(btnIdx) {
   $('fbRef').textContent = `📜 Art. ${B.n} CE · ${B.a.t}`;
   $('fbExp').textContent = B.a.e;
   $('fbSpeak').hidden = !S.voice;
-  $('fbMnemo').innerHTML = `💡 ${B.a.mn}`;
   $('qFeedback').hidden = false; renderHud(); refreshMap(); save();
   const last = B.i >= B.arts.length - 1;
   $('btnNext').textContent = last ? 'Terminar' : (B.mode === 'defense' && !correct ? 'Ver resultado…' : 'Siguiente ➜');

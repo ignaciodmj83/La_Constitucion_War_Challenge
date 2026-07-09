@@ -170,7 +170,8 @@ body {
 @keyframes crestIn { from { opacity: 0; transform: scale(.5) translateY(10px); } }
 .crest-shield { stroke: #f2e2b0; stroke-width: 3.5; stroke-linejoin: round; filter: drop-shadow(0 5px 8px rgba(0,0,0,.45)); }
 .crest-inner { stroke: rgba(255,255,255,.28); stroke-width: 1.6; }
-.crest-emoji { font-size: 46px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
+.crest-num { font-size: 21px; font-weight: 800; fill: #fff; paint-order: stroke; stroke: rgba(0,0,0,.55); stroke-width: 3.5px; }
+.crest-emoji { font-size: 40px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
 
 /* ── Preparación ── */
 .prep-card { width: min(600px,100%); --tc: var(--gold); border-top: 4px solid var(--tc); }
@@ -261,7 +262,7 @@ body {
 .index-card { width: min(680px,100%); display: flex; flex-direction: column; max-height: 88vh; }
 .index-sub { color: var(--muted); font-size: 13px; margin: 4px 0 12px; flex: none; }
 .index-tree { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; gap: 7px; padding-right: 4px; }
-.ix-titulo { border: 1px solid var(--line); border-radius: 11px; background: var(--panel2); overflow: hidden; }
+.ix-titulo { border: 1px solid var(--line); border-radius: 11px; background: var(--panel2); overflow: hidden; flex: none; }
 .ix-sum { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; font-weight: 800; flex-wrap: nowrap;
   width: 100%; text-align: left; border: none; background: transparent; color: var(--text); font-family: inherit; font-size: 14px; }
 .ix-arrow { color: var(--muted); font-size: 12px; transition: transform .15s; flex: none; }
