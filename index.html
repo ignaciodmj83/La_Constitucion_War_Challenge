@@ -50,10 +50,12 @@
 <div id="memoria" class="game-screen" hidden>
   <header class="mem-top">
     <button id="memBack" class="mem-back" title="Volver al menú">⬅️ Menú</button>
-    <div class="mem-heading">🃏 Memorión de la Constitución</div>
+    <div class="mem-heading">🃏 Memorión</div>
+    <div class="mem-lives" id="memLives"></div>
     <div class="mem-prog"><span id="memProg">0/169</span></div>
   </header>
-  <p class="mem-intro">Pulsa un número de artículo y elige de la lista de qué trata. Al acertar, la carta queda descubierta.</p>
+  <div class="mem-diffbar" id="memDiffBar"></div>
+  <p class="mem-intro">Memoriza el número de cada artículo: pulsa un número y elige de la lista de qué trata. Al acertar, la carta queda descubierta.</p>
   <div id="memGrid" class="mem-grid"></div>
 </div>
 <div id="memQuiz" class="overlay" hidden>

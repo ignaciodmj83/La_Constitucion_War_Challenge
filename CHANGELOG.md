@@ -4,6 +4,17 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.5.1] — 2026-07-09
+
+### Añadido (Memorión con dificultad)
+- **Niveles de dificultad en Memorión**, con vidas y condición de derrota:
+  · **Fácil**: 5 opciones, se puede fallar hasta 3 veces.
+  · **Medio**: se ofrecen todas las opciones del título, hasta 2 fallos.
+  · **Difícil**: se ofrecen todos los artículos aún no adivinados, sin fallar.
+- Indicador de vidas (❤️) y barra de dificultad; cada dificultad guarda su
+  propio progreso. Si se agotan los fallos, se pierde la partida y esa
+  dificultad se reinicia. El objetivo es **memorizar el número de cada artículo**.
+
 ## [2.5.0] — 2026-07-09
 
 ### Añadido
