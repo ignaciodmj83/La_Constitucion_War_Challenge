@@ -4,6 +4,21 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.4.1] — 2026-07-09
+
+### Arreglado
+- **Índice de la Constitución**: el desplegable se quedaba bloqueado (scroll
+  anidado + `<details>`). Ahora es un acordeón propio con un único contenedor
+  con scroll: cada título abre y cierra bien, en móvil y escritorio.
+- **Música**: no arrancaba al cargar (había que apagar/encender el interruptor).
+  Ahora el audio se desbloquea al primer gesto real (pulsación/tecla/toque) en
+  fase de captura, y la marcha suena desde el principio si está activada.
+
+### Añadido
+- **Contornos de capítulo**: cada capítulo del cuerpo de un reino se enmarca
+  con una frontera visible (línea discontinua), para distinguir los capítulos
+  dentro del reino.
+
 ## [2.4.0] — 2026-07-08
 
 ### Cambiado (mapa, música, voz y estadísticas)

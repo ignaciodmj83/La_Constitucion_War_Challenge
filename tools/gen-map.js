@@ -487,6 +487,20 @@ for (let n = 1; n <= 169; n++) {
 const islandOf = {}, tituloOf = {};
 for (const c of chapList) for (const n of c.arts) { islandOf[n] = c.id; tituloOf[n] = c.tituloId; }
 
+/* contorno de cada capítulo (para verlos dentro del reino). Solo en reinos con
+   varios capítulos; los satélites ya son islas visualmente separadas, así que
+   se dibuja el contorno de los capítulos del cuerpo principal. */
+const chapterOutlines = [];
+for (const c of chapList) {
+  const t = TITULOS.find((x) => x.id === c.tituloId);
+  if (t.islands.length <= 1) continue;
+  if (c.cls !== 'mainland') continue;
+  let pts = contourFor(chapLabel, chapIndex[c.id]);
+  if (pts.length < 4) continue;
+  pts = dp(pts, 1.4); pts = chaikin(chaikin(pts)); pts = dp(pts, 0.6);
+  chapterOutlines.push({ tituloId: c.tituloId, capId: c.id, path: toPath(pts) });
+}
+
 /* ═══════════════ adyacencia terrestre ═══════════════ */
 const adj = {}; for (let n = 1; n <= 169; n++) adj[n] = new Set();
 for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
@@ -559,7 +573,7 @@ const islandsOut = {}; for (const [id, m] of Object.entries(capMeta)) islandsOut
 const titulosOut = {}; for (const t of TITULOS) titulosOut[t.id] = { name: t.name, theme: t.theme, color: t.color, roman: t.roman, emblem: t.emblem || t.faction.unit, islands: t.islands.map((is) => is.id), continent: t.continent || null, labelCenter: tituloLabelCenter[t.id] };
 
 const out = `/* Generado por tools/gen-map.js — mundo Constitucia (Poniente + Essos, reinos con islas, 169 territorios) */
-const MAP = ${JSON.stringify({ view: [W, H], art: { path: artPath, center: artCenter, island: islandOf, titulo: tituloOf }, islands: islandsOut, titulos: titulosOut, adj: adjOut, seaRoutes, chapterBorders: [] }, null, 0)};
+const MAP = ${JSON.stringify({ view: [W, H], art: { path: artPath, center: artCenter, island: islandOf, titulo: tituloOf }, islands: islandsOut, titulos: titulosOut, adj: adjOut, seaRoutes, chapterBorders: [], chapterOutlines }, null, 0)};
 if (typeof module !== 'undefined') module.exports = { MAP };
 `;
 fs.writeFileSync(path.join(__dirname, '..', 'js', 'map-data.js'), out);

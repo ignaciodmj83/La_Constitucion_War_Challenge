@@ -78,19 +78,11 @@ body {
 .sea-route.owned { stroke: #5fd0a0; opacity: .45; }
 @keyframes routeFlow { to { stroke-dashoffset: -20; } }
 
-/* fronteras internas de capítulo: separan un pelín, sin cortar el paso */
-.chapter-river {
-  fill: none; stroke: #5fc7e0; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round;
-  stroke-dasharray: 3 5; opacity: .8; animation: riverFlow 2.2s linear infinite;
-  filter: drop-shadow(0 0 4px rgba(95,199,224,.5));
-  pointer-events: none;
-}
-@keyframes riverFlow { to { stroke-dashoffset: -16; } }
-.chapter-mountains {
-  fill: none; stroke: #7a7360; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
-  stroke-dasharray: 1 13; opacity: .85;
-  filter: drop-shadow(0 2px 2px rgba(0,0,0,.5));
-  pointer-events: none;
+/* contorno de capítulo: enmarca cada capítulo dentro del reino */
+.chapter-outline {
+  fill: none; stroke: rgba(255,255,255,.82); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round;
+  stroke-dasharray: 8 5; pointer-events: none;
+  paint-order: stroke; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9));
 }
 
 /* ── Controles de zoom ── */
@@ -266,19 +258,20 @@ body {
 .rd-times { font-size: 12px; color: var(--muted); margin-top: 6px; }
 
 /* ── Índice desplegable ── */
-.index-card { width: min(680px,100%); }
-.index-sub { color: var(--muted); font-size: 13px; margin: 4px 0 12px; }
-.index-tree { max-height: 64vh; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; padding-right: 4px; }
+.index-card { width: min(680px,100%); display: flex; flex-direction: column; max-height: 88vh; }
+.index-sub { color: var(--muted); font-size: 13px; margin: 4px 0 12px; flex: none; }
+.index-tree { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; gap: 7px; padding-right: 4px; }
 .ix-titulo { border: 1px solid var(--line); border-radius: 11px; background: var(--panel2); overflow: hidden; }
-.ix-titulo > summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; list-style: none; font-weight: 800; flex-wrap: nowrap; }
-.ix-titulo > summary::-webkit-details-marker { display: none; }
-.ix-titulo > summary::before { content: '▸'; color: var(--muted); font-size: 12px; transition: transform .15s; flex: none; }
-.ix-titulo[open] > summary::before { transform: rotate(90deg); }
+.ix-sum { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; font-weight: 800; flex-wrap: nowrap;
+  width: 100%; text-align: left; border: none; background: transparent; color: var(--text); font-family: inherit; font-size: 14px; }
+.ix-arrow { color: var(--muted); font-size: 12px; transition: transform .15s; flex: none; }
+.ix-titulo.open .ix-arrow { transform: rotate(90deg); }
 .ix-emblem { width: 30px; height: 30px; flex: none; display: flex; align-items: center; justify-content: center;
   font-size: 17px; border-radius: 8px; box-shadow: 0 0 0 1px rgba(0,0,0,.35), inset 0 1px 2px rgba(255,255,255,.25); }
 .ix-tname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ix-prog { color: var(--gold); font-variant-numeric: tabular-nums; font-size: 13px; flex: none; white-space: nowrap; }
-.ix-body { padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 3px; }
+.ix-body { display: none; padding: 4px 8px 8px; flex-direction: column; gap: 3px; }
+.ix-titulo.open .ix-body { display: flex; }
 .ix-cap { font-size: 12px; font-weight: 800; color: var(--muted); margin: 8px 4px 3px; text-transform: uppercase; letter-spacing: .3px; }
 .ix-art { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; border: none; background: transparent;
   color: var(--text); padding: 6px 8px; border-radius: 8px; cursor: pointer; font: inherit; }
@@ -349,7 +342,7 @@ body {
   .card { padding: 16px 14px; max-height: 94vh; }
   .card h2 { font-size: 17px; }
   .list-card, .index-card, .settings-card { width: 100%; }
-  .index-tree { max-height: 74vh; }
+  .index-card { max-height: 90vh; }
   .index-sub { font-size: 12px; }
   .ix-titulo > summary { padding: 9px 10px; gap: 8px; }
   .ix-emblem { width: 26px; height: 26px; font-size: 15px; }

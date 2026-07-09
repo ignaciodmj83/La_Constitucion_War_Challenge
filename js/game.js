@@ -345,16 +345,12 @@ function buildMap() {
   }
   svg.appendChild(terr);
 
-  // fronteras internas de capítulo: río o cordillera (contiguas, no separan por mar)
-  const dividers = svgEl('g', { id: 'dividers' });
-  for (const cb of (MAP.chapterBorders || [])) {
-    if (cb.style === 'river') {
-      dividers.appendChild(svgEl('path', { d: cb.path, class: 'chapter-river', title: cb.name }));
-    } else {
-      dividers.appendChild(svgEl('path', { d: cb.path, class: 'chapter-mountains', 'marker-mid': 'url(#mtnPeak)', title: cb.name }));
-    }
+  // contornos de capítulo: enmarcan cada capítulo dentro del reino
+  const outlines = svgEl('g', { id: 'chapterOutlines' });
+  for (const co of (MAP.chapterOutlines || [])) {
+    outlines.appendChild(svgEl('path', { d: co.path, class: 'chapter-outline', 'data-tid': co.tituloId, 'data-cap': co.capId }));
   }
-  svg.appendChild(dividers);
+  svg.appendChild(outlines);
 
   // emblema grande de cada reino (título), en el centro de su región
   const labels = svgEl('g', { id: 'labels' });
@@ -847,12 +843,17 @@ function renderIndex() {
       }).join('');
       return (multi ? `<div class="ix-cap">${is.name}</div>` : '') + rows;
     }).join('');
-    return `<details class="ix-titulo" ${owned > 0 ? 'open' : ''}>
-      <summary><span class="ix-emblem" style="background:${t.color}">${emblem}</span>
+    return `<div class="ix-titulo ${owned > 0 ? 'open' : ''}" data-tid="${t.id}">
+      <button class="ix-sum" type="button">
+        <span class="ix-arrow">▸</span>
+        <span class="ix-emblem" style="background:${t.color}">${emblem}</span>
         <span class="ix-tname">${t.roman ? t.roman + '. ' : ''}${t.name}</span>
-        <span class="ix-prog">${owned}/${arts.length}</span></summary>
-      <div class="ix-body">${body}</div></details>`;
+        <span class="ix-prog">${owned}/${arts.length}</span></button>
+      <div class="ix-body">${body}</div></div>`;
   }).join('');
+  tree.querySelectorAll('.ix-sum').forEach((b) => b.addEventListener('click', () => {
+    b.parentElement.classList.toggle('open'); sfx.click();
+  }));
   tree.querySelectorAll('.ix-art').forEach((b) => b.addEventListener('click', () => {
     const n = +b.dataset.n; $('indexModal').hidden = true; sfx.click();
     focusArticle(n, 520);
@@ -928,11 +929,17 @@ function init() {
   setInterval(playTick, 1000);
   document.addEventListener('visibilitychange', () => { lastPlayTs = Date.now(); });
   window.addEventListener('beforeunload', () => { playTick(); stopVoice(); save(); });
-  // música: arranca al primer gesto del usuario si está activada (autoplay bloqueado sin gesto)
-  if (S.music) {
-    const kick = () => { if (S.music) startMusic(); document.removeEventListener('pointerdown', kick); };
-    document.addEventListener('pointerdown', kick);
-  }
+  // música: arranca al primer gesto real del usuario (el autoplay está
+  // bloqueado sin interacción). Escuchamos en fase de captura para que ningún
+  // handler interno pueda tragarse el evento, y no quitamos el listener (si ya
+  // suena, startMusic no hace nada).
+  const unlockAudio = () => {
+    try { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); } catch { /* */ }
+    if (S.music && !music.on) startMusic();
+  };
+  document.addEventListener('pointerdown', unlockAudio, { capture: true });
+  document.addEventListener('keydown', unlockAudio, { capture: true });
+  document.addEventListener('touchstart', unlockAudio, { capture: true, passive: true });
   const params = new URLSearchParams(location.search);
   if (!S.seenIntro && !params.has('nointro')) $('introModal').hidden = false;
   const bes = TITULOS.filter((t) => artsOfTitulo(t.id).some((n) => S.owned[n]) && memoryOf(t.id) < MEMORY_DANGER);
