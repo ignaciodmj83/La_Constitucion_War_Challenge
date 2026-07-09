@@ -4,6 +4,15 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.5.2] — 2026-07-09
+
+### Cambiado (contorno del mapa más natural)
+- Las siluetas de los continentes dejan de parecer "aplastadas": la costa se
+  genera ahora con **ruido fractal (varias octavas)** y con las orillas
+  **izquierda y derecha independientes**, con una ventana que afila los
+  extremos. El resultado son **cabos, penínsulas y bahías** a distintas escalas,
+  con un aspecto mucho más parecido a un mapa terrestre real.
+
 ## [2.5.1] — 2026-07-09
 
 ### Añadido (Memorión con dificultad)

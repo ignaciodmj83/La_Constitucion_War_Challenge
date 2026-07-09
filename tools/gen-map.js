@@ -132,8 +132,25 @@ const PROFILE_FAR = [
   [0.36, 0.92, 0.07], [0.46, 1.00, 0.00], [0.58, 0.86, 0.09], [0.70, 0.72, 0.00],
   [0.80, 0.80, -0.07], [0.90, 0.46, 0.00], [0.97, 0.18, 0.03], [1.00, 0.05, 0.00],
 ];
-const HOME_CFG = { id: 'home', base: [500, 30], axis: [0, 1840], thick: 300, profile: PROFILE_HOME, seed: 20260707, jitter: 10, wobble: 30 };
-const FAR_CFG = { id: 'far', base: [1250, 985], axis: [1080, 0], thick: 560, profile: PROFILE_FAR, seed: 20260808, jitter: 12, wobble: 46 };
+const HOME_CFG = { id: 'home', base: [500, 30], axis: [0, 1840], thick: 300, profile: PROFILE_HOME, seed: 20260707, jitter: 6, coastAmp: 0.32, swayAmp: 0.13 };
+const FAR_CFG = { id: 'far', base: [1250, 985], axis: [1010, 0], thick: 600, profile: PROFILE_FAR, seed: 20260808, jitter: 7, coastAmp: 0.34, swayAmp: 0.15 };
+
+/* ruido 1D suave (para costas orgánicas). */
+function make1DNoise(seed, cells) {
+  const rnd = mulberry(seed); const g = [];
+  for (let i = 0; i <= cells; i++) g.push(rnd() * 2 - 1);
+  return (t) => {
+    let x = (t < 0 ? 0 : t > 1 ? 1 : t) * cells;
+    const i0 = Math.floor(x), i1 = Math.min(cells, i0 + 1), f = x - i0, s = f * f * (3 - 2 * f);
+    return g[i0] + (g[i1] - g[i0]) * s;
+  };
+}
+/* fBm 1D: varias octavas → costa con cabos y bahías a distintas escalas. */
+function coastFn(seed) {
+  const oct = [{ n: make1DNoise(seed, 3), a: 1 }, { n: make1DNoise(seed + 11, 7), a: 0.52 }, { n: make1DNoise(seed + 23, 16), a: 0.27 }, { n: make1DNoise(seed + 37, 34), a: 0.14 }];
+  const norm = oct.reduce((s, o) => s + o.a, 0);
+  return (t) => oct.reduce((s, o) => s + o.a * o.n(t), 0) / norm;
+}
 
 function buildContinent(cfg) {
   const interp = makeInterp(cfg.profile);
@@ -141,24 +158,28 @@ function buildContinent(cfg) {
   const L = Math.hypot(cfg.axis[0], cfg.axis[1]);
   const dir = [cfg.axis[0] / L, cfg.axis[1] / L];
   const perp = [-dir[1], dir[0]];
-  const steps = 90;
-  const w1f = 2 + rnd() * 1.5, w1p = rnd() * Math.PI * 2;
-  const w2f = 5 + rnd() * 2.5, w2p = rnd() * Math.PI * 2;
+  const steps = 150;
+  const cL = coastFn(cfg.seed + 101), cR = coastFn(cfg.seed + 202), cS = coastFn(cfg.seed + 303);
   const left = [], right = [];
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const [hwF, swF] = interp(t);
-    const wob = (Math.sin(t * Math.PI * 2 * w1f + w1p) + 0.5 * Math.sin(t * Math.PI * 2 * w2f + w2p)) * cfg.wobble;
-    const spineOff = swF * cfg.thick;
+    // ventana que apaga el ruido en los extremos → cabos afilados y costa
+    // rugosa e independiente a cada lado en el centro.
+    const win = Math.pow(Math.sin(Math.PI * t), 0.6);
+    const spineOff = (swF + cfg.swayAmp * win * cS(t)) * cfg.thick;
     const cxp = cfg.base[0] + cfg.axis[0] * t + perp[0] * spineOff;
     const cyp = cfg.base[1] + cfg.axis[1] * t + perp[1] * spineOff;
-    const half = hwF * cfg.thick + wob;
+    const minOff = 0.05 * cfg.thick;
+    let lo = (hwF + cfg.coastAmp * win * cL(t)) * cfg.thick;
+    let ro = (hwF + cfg.coastAmp * win * cR(t)) * cfg.thick;
+    if (lo < minOff) lo = minOff; if (ro < minOff) ro = minOff;
     const jl = (rnd() - 0.5) * cfg.jitter, jr = (rnd() - 0.5) * cfg.jitter;
-    left.push([cxp + perp[0] * (half + jl), cyp + perp[1] * (half + jl)]);
-    right.push([cxp - perp[0] * (half + jr), cyp - perp[1] * (half + jr)]);
+    left.push([cxp + perp[0] * (lo + jl), cyp + perp[1] * (lo + jl)]);
+    right.push([cxp - perp[0] * (ro + jr), cyp - perp[1] * (ro + jr)]);
   }
   let poly = left.concat(right.reverse());
-  poly = chaikin(chaikin(poly)); poly = dp(poly, 1.2);
+  poly = chaikin(poly); poly = dp(poly, 1.0);
   return poly;
 }
 function rasterizePoly(poly) {
