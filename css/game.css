@@ -257,6 +257,18 @@ body {
 .rd-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #d24b3e, #e3a93f, #3fbf6f); transition: width .5s; }
 .rd-sub { font-size: 12.5px; color: var(--muted); } .rd-sub b { color: var(--text); }
 .rd-times { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.stat-hero { grid-column: 1 / -1; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel2); }
+.sh-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+.sh-lbl { font-weight: 800; font-size: 13px; }
+.sh-val { font-weight: 800; font-size: 20px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.sh-foot { font-size: 11px; color: var(--muted); margin-top: 6px; }
+.study-chart { width: 100%; height: auto; display: block; margin-top: 4px; overflow: visible; }
+.sc-bar { fill: var(--gold); }
+.sc-base { stroke: rgba(255,255,255,.18); stroke-width: 1.5; }
+.sc-avg { stroke: #e07a4a; stroke-width: 1.5; stroke-dasharray: 4 3; opacity: .9; }
+.sc-x { fill: var(--muted); font-size: 9px; text-anchor: middle; }
+.stat-duo { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.s-of { font-size: 13px; color: var(--muted); font-weight: 600; }
 
 /* ── Índice desplegable ── */
 .index-card { width: min(680px,100%); display: flex; flex-direction: column; max-height: 88vh; }

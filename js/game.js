@@ -72,7 +72,7 @@ function defaultState() {
     daily: { streak: 1, last: todayKey() },
     ach: [], sound: true, music: false, voice: true, seenIntro: false,
     difficulty: 'normal', lastLossTs: Date.now(),
-    stats: { answers: 0, correct: 0, conquests: 0, defenses: 0, fastest: null, prepared: 0, playMs: 0, mastered: {}, best: {} },
+    stats: { answers: 0, correct: 0, conquests: 0, defenses: 0, fastest: null, prepared: 0, playMs: 0, mastered: {}, best: {}, days: {} },
   };
 }
 function loadState() {
@@ -87,6 +87,7 @@ function loadState() {
     if (typeof s.stats.playMs !== 'number') s.stats.playMs = 0;
     if (!s.stats.mastered) s.stats.mastered = {};
     if (!s.stats.best) s.stats.best = {};
+    if (!s.stats.days) s.stats.days = {};
     return s;
   } catch { return defaultState(); }
 }
@@ -761,7 +762,15 @@ function fmtDuration(ms) {
 }
 /* contador de tiempo de juego (solo mientras la pestaña está visible) */
 let lastPlayTs = Date.now();
-function playTick() { const now = Date.now(); if (!document.hidden) S.stats.playMs = (S.stats.playMs || 0) + (now - lastPlayTs); lastPlayTs = now; }
+function playTick() {
+  const now = Date.now();
+  if (!document.hidden) {
+    const d = now - lastPlayTs;
+    S.stats.playMs = (S.stats.playMs || 0) + d;
+    const k = todayKey(); S.stats.days[k] = (S.stats.days[k] || 0) + d;
+  }
+  lastPlayTs = now;
+}
 function confetti() {
   const canvas = $('confetti'); const ctx = canvas.getContext('2d'); canvas.width = innerWidth; canvas.height = innerHeight;
   const colors = ['#c60b1e', '#ffc400', '#e3a93f', '#fff', '#3fbf6f', '#b48cff'];
@@ -795,31 +804,58 @@ function showAchievements() {
   $('achList').innerHTML = ACHIEVEMENTS.map((a) => { const g = S.ach.includes(a.id); return `<div class="ach ${g ? '' : 'locked'}"><span class="a-icon">${g ? a.icon : '🔒'}</span><div><div class="a-name">${a.name}</div><div class="a-desc">${a.desc}</div></div><span class="a-pts">${g ? '✓ ' : ''}+${a.pts}</span></div>`; }).join('');
   $('achModal').hidden = false;
 }
+function lastDays(nDays) {
+  const out = []; const base = new Date();
+  for (let i = nDays - 1; i >= 0; i--) {
+    const d = new Date(base); d.setDate(base.getDate() - i);
+    const k = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    out.push({ k, dom: d.getDate(), wd: ['D', 'L', 'M', 'X', 'J', 'V', 'S'][d.getDay()], ms: S.stats.days[k] || 0 });
+  }
+  return out;
+}
+/* mini-gráfico de barras (una sola serie, hue oro; ejes discretos). */
+function studyChart(days) {
+  const W = 300, H = 118, padB = 18, padT = 8, n = days.length;
+  const gap = 3, bw = (W - (n - 1) * gap) / n;
+  const maxMs = Math.max(60000, ...days.map((d) => d.ms));
+  const plotH = H - padB - padT;
+  const avgActive = (() => { const v = Object.values(S.stats.days).filter((x) => x > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0; })();
+  const avgY = padT + plotH - (Math.min(avgActive, maxMs) / maxMs) * plotH;
+  let bars = '';
+  days.forEach((d, i) => {
+    const h = d.ms > 0 ? Math.max(2, (d.ms / maxMs) * plotH) : 0;
+    const x = i * (bw + gap), y = padT + plotH - h;
+    const mins = Math.round(d.ms / 60000);
+    if (h > 0) bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" class="sc-bar"><title>${d.dom}: ${mins} min</title></rect>`;
+    if (i % 2 === 0 || n <= 8) bars += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 5}" class="sc-x">${d.dom}</text>`;
+  });
+  const avgLine = avgActive > 0 ? `<line x1="0" y1="${avgY.toFixed(1)}" x2="${W}" y2="${avgY.toFixed(1)}" class="sc-avg"/>` : '';
+  return `<svg viewBox="0 0 ${W} ${H}" class="study-chart" role="img" aria-label="Minutos de estudio por día">
+    <line x1="0" y1="${padT + plotH}" x2="${W}" y2="${padT + plotH}" class="sc-base"/>${avgLine}${bars}</svg>`;
+}
 function showStats() {
   const acc = S.stats.answers ? S.stats.correct / S.stats.answers : 0;
   const mastered = Object.keys(S.stats.mastered || {}).length;
-  const conts = TITULOS.filter((t) => tituloConquered(t.id)).length;
-  // Preparación para las oposiciones: cuánto dominas (artículos acertados
-  // alguna vez) pesa más, y la fiabilidad (precisión) completa la nota.
   const readiness = Math.round(100 * (0.65 * (mastered / 169) + 0.35 * acc));
   const level = readiness >= 85 ? '🟢 Listo para el examen' : readiness >= 60 ? '🟡 Bien encaminado' : readiness >= 30 ? '🟠 En preparación' : '🔴 Empezando';
-  const best = S.stats.best || {};
-  const bestStr = (k) => best[k] != null ? fmtDuration(best[k]) : '—';
-  const banner = `<div class="readiness">
-    <div class="rd-head"><span class="rd-title">🎓 Preparación para las oposiciones</span><span class="rd-pct">${readiness}%</span></div>
-    <div class="rd-bar"><div class="rd-fill" style="width:${Math.max(2, readiness)}%"></div></div>
-    <div class="rd-sub">${level} · dominas <b>${mastered}/169</b> artículos con un <b>${Math.round(acc * 100)}%</b> de aciertos.</div>
-    <div class="rd-times">🏁 Mejor tiempo en conquistar los 169: 🌱 ${bestStr('facil')} · ⚔️ ${bestStr('normal')} · 🔥 ${bestStr('dificil')}</div>
-  </div>`;
-  const boxes = [
-    [`${mastered}/169`, 'Artículos dominados'], [`${Math.round(acc * 100)}%`, 'Precisión'],
-    [`${S.stats.correct}/${S.stats.answers}`, 'Aciertos totales'], [`×${S.bestCombo}`, 'Mejor combo'],
-    [`${Object.keys(S.owned).filter((k) => S.owned[k]).length}/169`, 'Territorios ahora'], [`${conts}/11`, 'Títulos completos'],
-    [fmtDuration(S.stats.playMs), 'Tiempo de juego'], [`${diff().emoji} ${diff().name}`, 'Dificultad'],
-    [S.stats.fastest ? `${S.stats.fastest.toFixed(1)}s` : '—', 'Respuesta más rápida'], [`${S.daily.streak} día(s)`, 'Racha diaria'],
-    [fmt(S.score), 'Puntos'], [`${S.ach.length}/${ACHIEVEMENTS.length}`, 'Logros'],
-  ];
-  $('statsList').innerHTML = banner + boxes.map(([v, l]) => `<div class="stat-box"><div class="s-val">${v}</div><div class="s-lbl">${l}</div></div>`).join('');
+  const activeVals = Object.values(S.stats.days).filter((x) => x > 0);
+  const avgDaily = activeVals.length ? activeVals.reduce((a, b) => a + b, 0) / activeVals.length : 0;
+  const days = lastDays(14);
+  $('statsList').innerHTML = `
+    <div class="readiness">
+      <div class="rd-head"><span class="rd-title">🎓 Preparación</span><span class="rd-pct">${readiness}%</span></div>
+      <div class="rd-bar"><div class="rd-fill" style="width:${Math.max(2, readiness)}%"></div></div>
+      <div class="rd-sub">${level} · dominas <b>${mastered}/169</b> artículos.</div>
+    </div>
+    <div class="stat-hero">
+      <div class="sh-head"><span class="sh-lbl">⏱️ Estudio diario (media)</span><span class="sh-val">${fmtDuration(avgDaily)}</span></div>
+      ${studyChart(days)}
+      <div class="sh-foot">Minutos de estudio por día · últimos 14 días · la línea es tu media</div>
+    </div>
+    <div class="stat-duo">
+      <div class="stat-box"><div class="s-val">${mastered}<span class="s-of">/169</span></div><div class="s-lbl">Artículos dominados</div></div>
+      <div class="stat-box"><div class="s-val">${S.daily.streak}</div><div class="s-lbl">Días seguidos estudiando</div></div>
+    </div>`;
   $('statsModal').hidden = false;
 }
 
