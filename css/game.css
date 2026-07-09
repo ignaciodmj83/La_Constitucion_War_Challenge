@@ -324,6 +324,58 @@ body {
 .speak-btn:hover { border-color: var(--gold); color: var(--gold); }
 .q-feedback .speak-btn { margin: 2px 0 8px; }
 
+/* ── Menú de juegos ── */
+.menu-overlay { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: radial-gradient(circle at 50% 28%, #16324a, #0a1a28 72%); overflow-y: auto; }
+.menu-overlay[hidden] { display: none; }
+.menu-card { width: min(760px, 100%); }
+.menu-brand { text-align: center; margin-bottom: 22px; }
+.menu-brand .brand-flag { margin: 0 auto; }
+.menu-brand h1 { font-size: 26px; margin: 12px 0 4px; }
+.menu-brand p { color: var(--muted); font-size: 14px; }
+.menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.game-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; min-height: 150px;
+  border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(180deg,var(--panel),var(--bg2));
+  padding: 18px; cursor: pointer; color: var(--text); font-family: inherit; transition: transform .12s, border-color .12s, box-shadow .12s; }
+.game-card:hover:not(.soon) { transform: translateY(-3px); border-color: var(--gold); box-shadow: 0 8px 22px rgba(0,0,0,.4); }
+.game-card .gc-emoji { font-size: 38px; line-height: 1; }
+.game-card .gc-name { font-size: 18px; font-weight: 800; }
+.game-card .gc-desc { font-size: 13px; color: var(--muted); flex: 1; line-height: 1.45; }
+.game-card .gc-go { font-weight: 800; color: var(--gold); font-size: 13px; margin-top: 4px; }
+.game-card.soon { opacity: .5; cursor: not-allowed; }
+.game-card.soon .gc-go { color: var(--muted); }
+
+/* ── Juego 2: Memorión ── */
+.game-screen { position: fixed; inset: 0; z-index: 40; background: var(--bg); overflow-y: auto; }
+.game-screen[hidden] { display: none; }
+.mem-top { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  background: rgba(16,28,43,.97); border-bottom: 1px solid var(--line); }
+.mem-back { border: 1px solid var(--line); background: var(--panel2); color: #fff; border-radius: 10px; padding: 8px 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.mem-back:hover { border-color: var(--gold); }
+.mem-heading { font-weight: 800; flex: 1; font-size: 15px; }
+.mem-prog { color: var(--gold); font-weight: 800; font-variant-numeric: tabular-nums; }
+.mem-intro { color: var(--muted); font-size: 13px; padding: 12px 16px 4px; max-width: 900px; margin: 0 auto; }
+.mem-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 8px; padding: 12px 16px 48px; max-width: 940px; margin: 0 auto; }
+.mem-card { aspect-ratio: 3 / 4; border-radius: 10px; cursor: pointer; color: #fff; font-family: inherit;
+  border: 2px solid var(--tc); background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(0,0,0,.35);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; transition: transform .1s; }
+.mem-card:hover { transform: translateY(-2px); }
+.mem-card .mc-n.big { font-size: 20px; font-weight: 800; }
+.mem-card.done { background: var(--tc); border-color: rgba(255,255,255,.35); box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+.mem-card.done .mc-emoji { font-size: 22px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+.mem-card.done .mc-n { font-size: 11px; font-weight: 700; opacity: .92; paint-order: stroke; }
+.mem-quiz-card { width: min(460px, 100%); text-align: center; }
+.mq-num { width: 84px; height: 84px; margin: 4px auto 12px; border-radius: 18px; display: flex; align-items: center; justify-content: center;
+  font-size: 40px; font-weight: 800; color: #fff; background: var(--tc, var(--gold)); box-shadow: 0 6px 16px rgba(0,0,0,.45); paint-order: stroke; -webkit-text-stroke: 1px rgba(0,0,0,.3); }
+.mq-prompt { font-weight: 700; margin-bottom: 14px; }
+.mq-options { display: flex; flex-direction: column; gap: 8px; }
+.mq-opt { border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 11px; padding: 13px 14px;
+  font: inherit; font-weight: 600; cursor: pointer; text-align: center; transition: border-color .1s; }
+.mq-opt:hover:not(:disabled) { border-color: var(--gold); }
+.mq-opt.ok { background: #1f6f43; border-color: #3fbf6f; color: #fff; }
+.mq-opt.bad { background: #6f2626; border-color: var(--danger); color: #fff; opacity: .85; }
+.mq-opt:disabled { cursor: default; }
+
 /* ── Intro ── */
 .intro-card { width: min(640px,100%); }
 .intro-lead { color: var(--muted); font-size: 14.5px; line-height: 1.55; margin: 6px 0 14px; }
@@ -367,4 +419,12 @@ body {
   .diff-opt .diff-txt small, .set-toggle .st-txt small { font-size: 11px; }
   #topbar .topbar-actions { gap: 2px; }
   .icon-btn { padding: 5px 6px; }
+  .menu-grid { grid-template-columns: 1fr; gap: 10px; }
+  .game-card { min-height: 0; flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .game-card .gc-emoji { font-size: 30px; }
+  .game-card .gc-name { font-size: 16px; }
+  .game-card .gc-desc { flex-basis: 100%; }
+  .menu-brand h1 { font-size: 21px; }
+  .mem-grid { grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 6px; padding: 10px 12px 40px; }
+  .mem-card .mc-n.big { font-size: 17px; }
 }

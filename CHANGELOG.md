@@ -4,6 +4,27 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.5.0] — 2026-07-09
+
+### Añadido
+- **Menú de inicio con varios juegos**: al abrir la app se elige entre 4 modos
+  (por ahora **Conquista** —el mapa tipo Risk— y **Memorión**; los otros dos
+  quedan como "Próximamente").
+- **Memorión** (juego 2): galería con los 169 números de artículo, cada carta
+  con el color de su reino. Al pulsar un número eliges de una lista (títulos de
+  ≤3 palabras) de qué trata; al acertar, la carta queda descubierta con su
+  símbolo. Progreso propio guardado.
+- **Estadísticas gráficas** centradas en el opositor: barra de Preparación,
+  **gráfico de estudio diario** (minutos/día, últimos 14 días, con la media) y
+  artículos dominados / días seguidos.
+- El **escudo del artículo** muestra ahora el número encima del símbolo.
+
+### Cambiado / Arreglado
+- **Índice**: se corrige el desplegable (un problema de flexbox lo recortaba);
+  ahora abre la lista completa de artículos con scroll.
+- Se **eliminan los trucos mnemotécnicos** (preparación, batalla y voz).
+- El tiempo de estudio se cuenta en cualquier modo (contador global).
+
 ## [2.4.1] — 2026-07-09
 
 ### Arreglado

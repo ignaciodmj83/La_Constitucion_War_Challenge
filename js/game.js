@@ -959,15 +959,29 @@ function init() {
   });
   setInterval(incomeTick, INCOME_TICK_MS);
   setInterval(refreshMap, 30000);
-  // tiempo de juego (solo con la pestaña visible)
+  const params = new URLSearchParams(location.search);
+  if (!S.seenIntro && !params.has('nointro')) $('introModal').hidden = false;
+  const bes = TITULOS.filter((t) => artsOfTitulo(t.id).some((n) => S.owned[n]) && memoryOf(t.id) < MEMORY_DANGER);
+  if (bes.length) setTimeout(() => toast(`🌫️ El Olvido asedia ${bes.length} título(s). ¡Defiéndelos!`, 'danger'), 800);
+}
+
+/* Arranque de la partida Risk (una sola vez), lo invoca el menú de juegos. */
+let riskStarted = false;
+function startRiskGame() {
+  if (riskStarted) { renderHud(); refreshMap(); return; }
+  riskStarted = true; init();
+}
+
+/* Boot global (independiente del juego): contador de estudio y desbloqueo de
+   audio al primer gesto real. Lo llama el lanzador (js/juegos.js). */
+let globalBooted = false;
+function bootGlobal() {
+  if (globalBooted) return; globalBooted = true;
   lastPlayTs = Date.now();
   setInterval(playTick, 1000);
+  setInterval(() => save(), 20000);
   document.addEventListener('visibilitychange', () => { lastPlayTs = Date.now(); });
   window.addEventListener('beforeunload', () => { playTick(); stopVoice(); save(); });
-  // música: arranca al primer gesto real del usuario (el autoplay está
-  // bloqueado sin interacción). Escuchamos en fase de captura para que ningún
-  // handler interno pueda tragarse el evento, y no quitamos el listener (si ya
-  // suena, startMusic no hace nada).
   const unlockAudio = () => {
     try { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); } catch { /* */ }
     if (S.music && !music.on) startMusic();
@@ -975,9 +989,4 @@ function init() {
   document.addEventListener('pointerdown', unlockAudio, { capture: true });
   document.addEventListener('keydown', unlockAudio, { capture: true });
   document.addEventListener('touchstart', unlockAudio, { capture: true, passive: true });
-  const params = new URLSearchParams(location.search);
-  if (!S.seenIntro && !params.has('nointro')) $('introModal').hidden = false;
-  const bes = TITULOS.filter((t) => artsOfTitulo(t.id).some((n) => S.owned[n]) && memoryOf(t.id) < MEMORY_DANGER);
-  if (bes.length) setTimeout(() => toast(`🌫️ El Olvido asedia ${bes.length} título(s). ¡Defiéndelos!`, 'danger'), 800);
 }
-document.addEventListener('DOMContentLoaded', init);

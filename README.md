@@ -25,6 +25,15 @@ continente.
 
 ---
 
+## Modos de juego
+
+Al abrir la app eliges entre varios modos de estudiar la Constitución:
+
+- ⚔️ **Conquista** — el mapa tipo *Risk* descrito abajo.
+- 🃏 **Memorión** — una galería con los 169 números de artículo; pulsas uno y
+  aciertas de qué trata eligiendo de una lista breve.
+- 🔜 Dos modos más en camino.
+
 ## ¿Qué es esto?
 
 La Constitución Española es aquí **Constitucia**: un mundo de **dos

@@ -9,6 +9,62 @@
 </head>
 <body>
 
+<!-- Menú de juegos -->
+<div id="gameMenu" class="menu-overlay">
+  <div class="menu-card">
+    <div class="menu-brand">
+      <span class="brand-flag"></span>
+      <h1>La Constitución: WarChallenge</h1>
+      <p>Elige tu forma de estudiar la Constitución Española de 1978</p>
+    </div>
+    <div class="menu-grid">
+      <button class="game-card" data-game="risk">
+        <span class="gc-emoji">⚔️</span>
+        <span class="gc-name">Conquista</span>
+        <span class="gc-desc">Mapa tipo Risk: conquista los 169 artículos por el mundo de Constitucia.</span>
+        <span class="gc-go">Jugar ▸</span>
+      </button>
+      <button class="game-card" data-game="memoria">
+        <span class="gc-emoji">🃏</span>
+        <span class="gc-name">Memorión</span>
+        <span class="gc-desc">Galería de artículos: pulsa un número y acierta de qué trata.</span>
+        <span class="gc-go">Jugar ▸</span>
+      </button>
+      <button class="game-card soon" disabled>
+        <span class="gc-emoji">🧩</span>
+        <span class="gc-name">Próximamente</span>
+        <span class="gc-desc">Nuevo modo de estudio en camino.</span>
+        <span class="gc-go">Muy pronto</span>
+      </button>
+      <button class="game-card soon" disabled>
+        <span class="gc-emoji">⏱️</span>
+        <span class="gc-name">Próximamente</span>
+        <span class="gc-desc">Nuevo modo de estudio en camino.</span>
+        <span class="gc-go">Muy pronto</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Juego 2: Memorión -->
+<div id="memoria" class="game-screen" hidden>
+  <header class="mem-top">
+    <button id="memBack" class="mem-back" title="Volver al menú">⬅️ Menú</button>
+    <div class="mem-heading">🃏 Memorión de la Constitución</div>
+    <div class="mem-prog"><span id="memProg">0/169</span></div>
+  </header>
+  <p class="mem-intro">Pulsa un número de artículo y elige de la lista de qué trata. Al acertar, la carta queda descubierta.</p>
+  <div id="memGrid" class="mem-grid"></div>
+</div>
+<div id="memQuiz" class="overlay" hidden>
+  <div class="card mem-quiz-card">
+    <button class="card-close" data-close="memQuiz">✕</button>
+    <div class="mq-num" id="mqNum">1</div>
+    <div class="mq-prompt">¿De qué trata este artículo?</div>
+    <div id="mqOptions" class="mq-options"></div>
+  </div>
+</div>
+
 <header id="topbar">
   <div class="brand">
     <span class="brand-flag"></span>
@@ -206,5 +262,6 @@
 <script src="js/data.js"></script>
 <script src="js/voz.js"></script>
 <script src="js/game.js"></script>
+<script src="js/juegos.js"></script>
 </body>
 </html>
