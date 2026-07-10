@@ -31,8 +31,10 @@
   const spokeRad = (d) => RR - d * (RR - 72) / (SPOKE_LEN + 1);
   const spokePos = (k, d) => { const a = -Math.PI / 2 + (HQ(k) / RING) * 2 * Math.PI; const r = spokeRad(d); return [C + r * Math.cos(a), C + r * Math.sin(a)]; };
   const PLAYER_COLORS = ['#f2e2b0', '#ff6b6b', '#5db0ff', '#b48cff'];
-  const PLAYER_NAMES = ['Tú', 'Ana', 'Luis', 'Marta'];
+  const PLAYER_NAMES = ['Tú', 'El Rey', 'La Cartógrafa', 'El Juez'];
+  const PLAYER_TID = ['preliminar', 't2', 't8', 't6']; // guardián que encarna cada jugador
   const AI_SKILL = [0, 0.55, 0.68, 0.8];
+  const pjAvatar = (tid, px) => (typeof PERSONAJES !== 'undefined') ? PERSONAJES.avatar(tid, px) : '';
 
   let T = null, SPTIT = [], SPKTIT = [];
   function genSpaces() {
@@ -41,7 +43,7 @@
   }
   function newGame() {
     genSpaces();
-    T = { players: PLAYER_NAMES.map((name, i) => ({ name, color: PLAYER_COLORS[i], loc: 'ring', i: 0, k: 0, depth: 0, wedges: new Set(), ai: i > 0, skill: AI_SKILL[i], homing: false })), turn: 0, busy: false, over: false, dieShown: 0 };
+    T = { players: PLAYER_NAMES.map((name, i) => ({ name, tid: PLAYER_TID[i], color: PLAYER_COLORS[i], loc: 'ring', i: 0, k: 0, depth: 0, wedges: new Set(), ai: i > 0, skill: AI_SKILL[i], homing: false })), turn: 0, busy: false, over: false, dieShown: 0 };
   }
   const nodePos = (p) => p.loc === 'center' ? [C, C] : p.loc === 'spoke' ? spokePos(p.k, p.depth) : ringPos(p.i);
   const titOfNode = (p) => p.loc === 'ring' ? SPTIT[p.i] : p.loc === 'spoke' ? SPKTIT[p.k][p.depth] : -1;
@@ -102,7 +104,7 @@
   function renderPlayers() {
     $('trivPlayers').innerHTML = T.players.map((p, i) => `
       <div class="triv-pl ${i === T.turn ? 'active' : ''}">
-        <span class="triv-pl-dot" style="background:${p.color}">${p.name[0]}</span>
+        <span class="triv-pl-av" style="--tc:${p.color}">${pjAvatar(p.tid, 30) || `<span class="triv-pl-dot" style="background:${p.color}">${p.name[0]}</span>`}</span>
         <span class="triv-pl-name">${p.name}${p.ai ? '' : ' (tú)'}${p.homing ? ' 🎯' : ''}</span>
         <span class="triv-pl-count">${p.wedges.size}/11</span>
         <span class="triv-pl-wedges">${TITULOS.map((t) => `<span class="tw" style="background:${p.wedges.has(t.id) ? t.color : '#2a3850'}"></span>`).join('')}</span>
@@ -148,7 +150,7 @@
     const order = shuffle(a.o.map((_, k2) => k2));
     const q = $('trivQuiz'); q.hidden = false;
     q.innerHTML = `<div class="triv-quiz-card" style="--tc:${t.color}">
-      <div class="tq-head"><div class="tq-cat">${MAP.titulos[t.id].emblem || ''} ${t.roman ? 'Título ' + t.roman + ' · ' : ''}${t.name}${hq ? ' · ⭐ QUESITO' : ''}</div>${artBadge(n, t)}</div>
+      <div class="tq-head"><div class="tq-cat">${pjAvatar(t.id, 30)}<span>${t.roman ? 'Título ' + t.roman + ' · ' : ''}${t.name}${hq ? ' · ⭐ QUESITO' : ''}</span></div>${artBadge(n, t)}</div>
       <div class="tc-q">${a.q}</div><div class="tc-options" id="tqOpts"></div><div class="tc-feedback" id="tqFb" hidden></div></div>`;
     const box = $('tqOpts');
     order.forEach((oi) => { const b = document.createElement('button'); b.className = 'tc-opt'; b.textContent = a.o[oi]; b.dataset.oi = oi; b.addEventListener('click', () => humanAnswer(oi, n, a, k, hq, box)); box.appendChild(b); });
@@ -179,7 +181,7 @@
       const ord = shuffle(a.o.map((_, k) => k));
       const q = $('trivQuiz'); q.hidden = false;
       q.innerHTML = `<div class="triv-quiz-card triv-battery" style="--tc:${t.color}">
-        <div class="tq-head"><div class="tq-cat">🎯 Final ${idx + 1}/${SEG} · ${t.roman ? 'Título ' + t.roman + ' · ' : ''}${t.name}</div>${artBadge(n, t)}</div>
+        <div class="tq-head"><div class="tq-cat">${pjAvatar(t.id, 30)}<span>🎯 Final ${idx + 1}/${SEG} · ${t.roman ? 'Título ' + t.roman + ' · ' : ''}${t.name}</span></div>${artBadge(n, t)}</div>
         <div class="tc-q">${a.q}</div><div class="tc-options" id="tqOpts"></div></div>`;
       const box = $('tqOpts');
       ord.forEach((oi) => { const b = document.createElement('button'); b.className = 'tc-opt'; b.textContent = a.o[oi]; b.dataset.oi = oi; b.addEventListener('click', () => {
@@ -228,8 +230,10 @@
     if (human) store.wins = (store.wins || 0) + 1;
     saveStore(); if (typeof save === 'function') save();
     const q = $('trivQuiz'); q.hidden = false;
-    q.innerHTML = `<div class="triv-quiz-card triv-end"><div class="ts-emoji">${human ? '🏆' : '🤖'}</div>
-      <h2>${human ? '¡Has ganado el Trivial!' : `Ganó ${T.players[winnerIdx].name}`}</h2>
+    const unidadArt = (typeof PERSONAJES !== 'undefined') ? PERSONAJES.portrait('unidad', 'sm') : `<div class="ts-emoji">${human ? '🏆' : '🤖'}</div>`;
+    q.innerHTML = `<div class="triv-quiz-card triv-end" style="--tc:#c9a13b">
+      ${human ? unidadArt : `<div class="ts-emoji">🤖</div>`}
+      <h2>${human ? '🏆 ¡Alcanzaste La Unidad de España!' : `Ganó ${T.players[winnerIdx].name}`}</h2>
       <p class="ts-score">Completaste ${T.players[0].wedges.size}/11 quesitos.</p>
       <div class="ts-actions"><button id="tqAgain" class="primary-btn">Otra partida 🎲</button><button id="tqMenu" class="secondary-btn">Volver al menú</button></div></div>`;
     if (human) { try { if (typeof confetti === 'function') confetti(); } catch { /* */ } }

@@ -4,6 +4,28 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.10.0] — 2026-07-10
+
+### Añadido (El Consejo Constituyente: personajes en los 4 juegos)
+- **Reparto de 11 guardianes** (uno por título) + **La Unidad de España** como
+  figura final. Cada personaje tiene su marco temático con el color de su título
+  (`js/personajes.js`), y **el arte real se incorpora solo**: se busca en
+  `assets/personajes/<id>.png` y, si falta, se dibuja el emblema del título como
+  respaldo (el juego funciona con o sin las imágenes).
+- **Voz → el personaje habla:** al pulsar 🗣️ Escuchar la explicación de un
+  artículo, aparece el guardián de ese título en un panel, con burbuja animada y
+  el texto que se narra.
+- **📖 Estudio:** cada título se encabeza con el retrato y el nombre de su guardián.
+- **⚔️ Conquista:** el profesor de cada título pasa a ser su guardián (retrato en
+  la pantalla de preparación).
+- **🃏 Memorión:** cada recuadro de capítulo lleva el avatar de su guardián.
+- **❓ Trivial:** los 4 jugadores son guardianes (Tú, El Rey, La Cartógrafa,
+  El Juez); cada pregunta muestra al guardián de su título; ganar = **alcanzar a
+  La Unidad de España** (retrato en la victoria).
+- **🏛️ Tribunal:** El Juez del Búho (Título VI) preside los casos como avatar.
+- `build.js` copia `assets/` al bundle `dist/`; ver `assets/personajes/README.md`
+  para añadir el arte.
+
 ## [2.9.3] — 2026-07-10
 
 ### Cambiado (símbolos únicos, color único, estudio en el menú, Memorión)

@@ -223,7 +223,7 @@ function stopMusic() {
 }
 
 /* ───────────────────────── Voz (explica el artículo, Web Speech API) ───────────────────────── */
-function stopVoice() { try { window.speechSynthesis && speechSynthesis.cancel(); } catch { /* */ } }
+function stopVoice() { try { window.speechSynthesis && speechSynthesis.cancel(); } catch { /* */ } if (typeof window.pjOnSpeakEnd === 'function') window.pjOnSpeakEnd(); }
 function pickVoice() {
   try { const vs = speechSynthesis.getVoices(); return vs.find((v) => /es[-_]ES/i.test(v.lang)) || vs.find((v) => /^es/i.test(v.lang)) || null; } catch { return null; }
 }
@@ -242,6 +242,10 @@ function speakArticle(n) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'es-ES'; u.rate = 1; u.pitch = 1;
   const v = pickVoice(); if (v) u.voice = v;
+  // Capa visual de personajes: muestra al personaje del título "hablando".
+  if (typeof window.pjOnSpeak === 'function') window.pjOnSpeak(n, text);
+  u.onend = () => { if (typeof window.pjOnSpeakEnd === 'function') window.pjOnSpeakEnd(); };
+  u.onerror = () => { if (typeof window.pjOnSpeakEnd === 'function') window.pjOnSpeakEnd(); };
   try { speechSynthesis.speak(u); } catch { /* */ }
 }
 
@@ -544,8 +548,9 @@ function startPrep(islandId) {
   const meta = MAP.islands[islandId]; const t = tituloById(meta.tituloId);
   PREP = { islandId, i: 0, arts: meta.arts.slice(), tid: t.id };   // meta.arts ya viene expandido
   $('prepColor').style.setProperty('--tc', t.color);
-  $('prepProfEmoji').textContent = t.prof.emoji;
-  $('prepProfName').textContent = t.prof.name;
+  const guard = (typeof PERSONAJES !== 'undefined') ? PERSONAJES.of(t.id) : null;
+  if (guard) { $('prepProfEmoji').innerHTML = PERSONAJES.avatar(t.id, 48); $('prepProfName').textContent = guard.name; }
+  else { $('prepProfEmoji').textContent = t.prof.emoji; $('prepProfName').textContent = t.prof.name; }
   $('prepFaction').textContent = meta.name;
   $('prep').hidden = false; renderPrepCard();
 }

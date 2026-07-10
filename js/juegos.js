@@ -80,7 +80,8 @@
         const box = document.createElement('div'); box.className = 'mem-chapter'; box.style.setProperty('--tc', t.color);
         const label = multi ? is.name : ((t.roman ? 'Título ' + t.roman + ' · ' : '') + t.name);
         const head = document.createElement('div'); head.className = 'mem-ch-head';
-        head.innerHTML = `<span class="mem-ch-emblem">${MAP.titulos[t.id].emblem || ''}</span><span>${label}</span>`;
+        const gav = (typeof PERSONAJES !== 'undefined') ? PERSONAJES.avatar(t.id, 26) : `<span class="mem-ch-emblem">${MAP.titulos[t.id].emblem || ''}</span>`;
+        head.innerHTML = `${gav}<span>${label}</span>`;
         const cards = document.createElement('div'); cards.className = 'mem-ch-cards';
         arts.forEach((n) => {
           const done = !!matched[n];
@@ -190,11 +191,13 @@
         }).join('');
         return (multi ? `<div class="ix-cap">${is.name}</div>` : '') + rows;
       }).join('');
+      const guard = (typeof PERSONAJES !== 'undefined') ? PERSONAJES.of(t.id) : null;
+      const icon = guard ? PERSONAJES.avatar(t.id, 34) : `<span class="ix-emblem" style="background:${t.color}">${emblem}</span>`;
       return `<div class="ix-titulo" data-tid="${t.id}">
         <button class="ix-sum" type="button">
           <span class="ix-arrow">▸</span>
-          <span class="ix-emblem" style="background:${t.color}">${emblem}</span>
-          <span class="ix-tname">${t.roman ? t.roman + '. ' : ''}${t.name}</span>
+          ${icon}
+          <span class="ix-tname">${t.roman ? t.roman + '. ' : ''}${t.name}${guard ? `<small class="ix-guard">${guard.name}</small>` : ''}</span>
           <span class="ix-prog">${arts.length} art.</span></button>
         <div class="ix-body">${body}</div></div>`;
     }).join('');

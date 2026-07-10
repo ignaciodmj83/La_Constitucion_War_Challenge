@@ -15,7 +15,7 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 let html = read('index.html');
 const css = read('css/game.css');
-const js = ['js/map-data.js', 'js/hierarchy.js', 'js/data.js', 'js/voz.js', 'js/etiquetas.js', 'js/game.js', 'js/tribunal.js', 'js/trivial.js', 'js/estadisticas.js', 'js/juegos.js'].map(read).join('\n\n');
+const js = ['js/map-data.js', 'js/hierarchy.js', 'js/data.js', 'js/voz.js', 'js/etiquetas.js', 'js/personajes.js', 'js/game.js', 'js/tribunal.js', 'js/trivial.js', 'js/estadisticas.js', 'js/juegos.js'].map(read).join('\n\n');
 
 // Sustituir la hoja de estilos externa por un bloque <style> en línea
 html = html.replace(/<link[^>]+game\.css[^>]*>/, `<style>\n${css}\n</style>`);
@@ -29,4 +29,18 @@ fs.mkdirSync(outDir, { recursive: true });
 const out = path.join(outDir, 'index.html');
 fs.writeFileSync(out, html, 'utf8');
 
-console.log(`✓ Bundle generado: dist/index.html (${(fs.statSync(out).size / 1024).toFixed(0)} KB)`);
+// Copiar activos estáticos (retratos de los personajes, etc.) al bundle.
+function copyDir(src, dst) {
+  if (!fs.existsSync(src)) return 0;
+  fs.mkdirSync(dst, { recursive: true });
+  let n = 0;
+  for (const e of fs.readdirSync(src, { withFileTypes: true })) {
+    const s = path.join(src, e.name), d = path.join(dst, e.name);
+    if (e.isDirectory()) n += copyDir(s, d);
+    else { fs.copyFileSync(s, d); n++; }
+  }
+  return n;
+}
+const nAssets = copyDir(path.join(ROOT, 'assets'), path.join(outDir, 'assets'));
+
+console.log(`✓ Bundle generado: dist/index.html (${(fs.statSync(out).size / 1024).toFixed(0)} KB)` + (nAssets ? ` · ${nAssets} activos copiados` : ''));

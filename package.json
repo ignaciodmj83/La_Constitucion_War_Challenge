@@ -1,6 +1,6 @@
 {
   "name": "la-constitucion-war-challenge",
-  "version": "2.9.3",
+  "version": "2.10.0",
   "description": "La Constitución: WarChallenge — juego de aprendizaje de la Constitución Española de 1978 con mecánica de mapa de conquista tipo Risk.",
   "type": "commonjs",
   "scripts": {
@@ -8,7 +8,7 @@
     "build": "node scripts/build.js",
     "map": "node tools/gen-map.js",
     "test": "node tests/validate.js",
-    "check": "node --check js/hierarchy.js && node --check js/data.js && node --check js/voz.js && node --check js/etiquetas.js && node --check js/game.js && node --check js/tribunal.js && node --check js/trivial.js && node --check js/estadisticas.js && node --check js/juegos.js && node --check js/map-data.js"
+    "check": "node --check js/hierarchy.js && node --check js/data.js && node --check js/voz.js && node --check js/etiquetas.js && node --check js/personajes.js && node --check js/game.js && node --check js/tribunal.js && node --check js/trivial.js && node --check js/estadisticas.js && node --check js/juegos.js && node --check js/map-data.js"
   },
   "keywords": [
     "constitucion-espanola",

@@ -1,0 +1,111 @@
+/* =========================================================================
+   PERSONAJES — el "Consejo Constituyente": 11 guardianes, uno por título
+   (+ La Unidad de España como figura final/heroína).
+   Capa visual compartida por los 4 juegos:
+     - retrato enmarcado por título (con su color y emblema),
+     - overlay "el personaje habla" al escuchar la explicación de un artículo,
+     - fichas/avatares para el Trivial y profesores para el estudio.
+   El arte real vive en assets/personajes/<id>.(png|webp); si falta, se dibuja
+   un retrato-marco temático como respaldo, así que todo funciona sin las
+   imágenes y se engalana automáticamente al añadirlas.
+   Sin dependencias. Usa TITULOS/MAP/ARTICLES/VOZ globales.
+   ========================================================================= */
+'use strict';
+(function () {
+  const ASSET = (id) => `assets/personajes/${id}.png`;
+
+  // Metadatos por título (id de hierarchy.js). El "name/tagline" acompaña al arte.
+  const PERSONAJES = {
+    preliminar: { name: 'El Sabio Fundador', tagline: 'Guardián de las Tablas: Democracia, Derechos y Libertad.', emblem: '📜' },
+    t1: { name: 'El Custodio de los Derechos', tagline: 'Con la paloma y la balanza, protejo los derechos fundamentales.', emblem: '🕊️' },
+    t2: { name: 'El Rey', tagline: 'Corona y cetro: símbolo de la unidad y permanencia del Estado.', emblem: '👑' },
+    t3: { name: 'La Voz de las Cortes', tagline: 'Custodio el Libro de las Leyes que aprueban Congreso y Senado.', emblem: '🏛️' },
+    t4: { name: 'El Ministro del Reino', tagline: 'Pluma y decreto: aquí se gobierna y se administra.', emblem: '⚙️' },
+    t5: { name: 'El Enlace Parlamentario', tagline: 'Control parlamentario y cooperación entre Gobierno y Cortes.', emblem: '🤝' },
+    t6: { name: 'El Juez del Búho', tagline: 'Balanza y sabiduría: la justicia emana del pueblo.', emblem: '⚖️' },
+    t7: { name: 'El Tesorero del Reino', tagline: 'Presupuestos y tributos: yo custodio el oro del Estado.', emblem: '🪙' },
+    t8: { name: 'La Cartógrafa de España', tagline: 'Municipios, provincias y autonomías: yo dibujé este mapa.', emblem: '🗺️' },
+    t9: { name: 'Los Guardianes del Tribunal', tagline: 'Con lupa y llama vigilamos que ninguna ley traicione la Constitución.', emblem: '🛡️' },
+    t10: { name: 'La Arquitecta de la Reforma', tagline: 'Plano en mano, diseño cómo se cambia la Constitución.', emblem: '📐' },
+  };
+  // Figura final / heroína transversal (victorias, portada, centro del Trivial).
+  const UNIDAD = { id: 'unidad', name: 'La Unidad de España', tagline: 'Corona, escudo y espada: la Nación indisoluble que a todos une.', emblem: '🛡️', img: ASSET('unidad') };
+
+  function pjOf(tid) {
+    const p = PERSONAJES[tid]; if (!p) return null;
+    const t = (typeof TITULOS !== 'undefined') && TITULOS.find((x) => x.id === tid);
+    return Object.assign({ id: tid, color: (t && t.color) || '#8a93a8', roman: (t && t.roman) || '', titulo: (t && t.name) || '', img: ASSET(tid) }, p);
+  }
+  const list = () => Object.keys(PERSONAJES).map(pjOf);
+
+  /* ── Retrato enmarcado (arte real con respaldo temático) ──
+     size: 'sm' | 'md' | 'lg'. Devuelve HTML. */
+  function portrait(tid, size = 'md') {
+    const p = tid === 'unidad' ? Object.assign({ color: '#c9a13b', roman: '', titulo: 'La Unidad de España' }, UNIDAD) : pjOf(tid);
+    if (!p) return '';
+    return `<figure class="pj-portrait pj-${size}" style="--tc:${p.color}">
+      <div class="pj-frame">
+        <img class="pj-art" src="${p.img}" alt="${p.name}" loading="lazy"
+             onerror="this.classList.add('pj-art-missing')">
+        <span class="pj-fallback" aria-hidden="true">${p.emblem}</span>
+      </div>
+      <figcaption class="pj-cap"><b class="pj-name">${p.name}</b>${p.roman ? `<span class="pj-role">Título ${p.roman}</span>` : ''}</figcaption>
+    </figure>`;
+  }
+
+  /* ── Avatar compacto (círculo temático con arte o emblema) ── */
+  function avatar(tid, px = 34) {
+    const p = tid === 'unidad' ? Object.assign({ color: '#c9a13b' }, UNIDAD) : pjOf(tid);
+    if (!p) return '';
+    return `<span class="pj-avatar" style="--tc:${p.color};width:${px}px;height:${px}px" title="${p.name}">
+      <img src="${p.img}" alt="${p.name}" onerror="this.classList.add('pj-art-missing')">
+      <span class="pj-av-fb" aria-hidden="true">${p.emblem}</span></span>`;
+  }
+
+  /* ── Overlay "el personaje habla" ── */
+  let host = null, hideTimer = null;
+  function ensureHost() {
+    if (host) return host;
+    host = document.createElement('div');
+    host.className = 'pj-speak'; host.hidden = true;
+    host.addEventListener('click', (e) => { if (e.target === host || e.target.classList.contains('pj-speak-close')) hideSpeaking(); });
+    document.body.appendChild(host);
+    return host;
+  }
+  function showSpeaking(tid, text) {
+    const p = pjOf(tid); if (!p) return;
+    const h = ensureHost();
+    h.style.setProperty('--tc', p.color);
+    h.innerHTML = `
+      <div class="pj-speak-card">
+        <button class="pj-speak-close" title="Cerrar">✕</button>
+        <div class="pj-speaker">
+          <div class="pj-frame pj-talking">
+            <img class="pj-art" src="${p.img}" alt="${p.name}" onerror="this.classList.add('pj-art-missing')">
+            <span class="pj-fallback" aria-hidden="true">${p.emblem}</span>
+          </div>
+          <div class="pj-speaker-meta"><b>${p.name}</b><small>${p.roman ? 'Título ' + p.roman + ' · ' : ''}${p.titulo}</small></div>
+        </div>
+        <div class="pj-bubble"><span class="pj-bubble-dots"><i></i><i></i><i></i></span><p class="pj-bubble-txt">${text}</p></div>
+      </div>`;
+    h.hidden = false;
+    requestAnimationFrame(() => h.classList.add('show'));
+    clearTimeout(hideTimer);
+  }
+  function hideSpeaking() {
+    if (!host) return;
+    host.classList.remove('show');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => { if (host) host.hidden = true; }, 260);
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch { /* */ }
+  }
+
+  // Ganchos que dispara speakArticle() en game.js.
+  window.pjOnSpeak = function (n, text) {
+    try { const tid = MAP.art.titulo[n]; showSpeaking(tid, text); } catch { /* */ }
+  };
+  window.pjOnSpeakEnd = function () { hideSpeaking(); };
+
+  // API pública para los juegos.
+  window.PERSONAJES = { of: pjOf, list, portrait, avatar, unidad: () => UNIDAD, showSpeaking, hideSpeaking };
+})();

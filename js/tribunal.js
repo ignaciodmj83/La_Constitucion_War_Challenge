@@ -255,7 +255,12 @@
     $('tribRole').textContent = T.mode === 'abogado' ? '⚖️ Letrado/a' : '👨‍⚖️ Magistrado/a';
     $('tribProg').textContent = `Caso ${T.i + 1}/${CASOS.length}`;
     const block = T.mode === 'abogado' ? c.abogado : c.juez;
-    const rol = T.mode === 'abogado' ? `<div class="tc-rol">🧑‍💼 ${c.rolAbogado}</div>` : '<div class="tc-rol">⚖️ Escuchas a las partes y debes resolver.</div>';
+    const juez = (typeof PERSONAJES !== 'undefined') ? PERSONAJES.of('t6') : null;
+    const juezAv = juez ? PERSONAJES.avatar('t6', 30) : '';
+    const juezName = juez ? juez.name : 'el/la magistrado/a';
+    const rol = T.mode === 'abogado'
+      ? `<div class="tc-rol">${juezAv}<span>🧑‍💼 ${c.rolAbogado} · alegas ante ${juezName}</span></div>`
+      : `<div class="tc-rol">${juezAv}<span>Eres ${juezName}: escuchas a las partes y dictas el fallo.</span></div>`;
     $('tribStage').innerHTML = `
       <div class="trib-case">
         <div class="tc-arts">${c.arts.map((a) => `<span class="tc-art">Art. ${a}</span>`).join('')}</div>
