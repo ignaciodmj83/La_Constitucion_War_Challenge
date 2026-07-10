@@ -20,7 +20,7 @@
   function mConquista() { const hi = Sstats().hiConq || {}; let m = 0; ['facil', 'normal', 'dificil'].forEach((d) => { m = Math.max(m, ((hi[d] || 0) / 169) * WD[d]); }); return m; }
   function mMemoria() { const o = pget('ce78_memoria_v2'); const hi = o.hi || {}; let m = 0; ['facil', 'medio', 'dificil'].forEach((d) => { m = Math.max(m, ((hi[d] || 0) / 169) * WD[d]); }); return m; }
   function mTribunal() { const o = pget('ce78_tribunal_v1'); const b = o.best || {}; const N = o.total || 10; return ((Math.min(b.abogado || 0, N) / N) + (Math.min(b.juez || 0, N) / N)) / 2; }
-  function mTrivial() { const o = pget('ce78_trivial_v1'); return Math.min(1, (o.bestCorrect || 0) / 12); }
+  function mTrivial() { const o = pget('ce78_trivial_v1'); if (o.bestWedges != null) return Math.min(1, o.bestWedges / 11); return Math.min(1, (o.bestCorrect || 0) / 12); }
 
   const GAMES = [
     { key: 'conquista', name: 'Conquista', emoji: '⚔️', color: '#e0a52e', m: mConquista },

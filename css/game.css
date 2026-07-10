@@ -473,6 +473,35 @@ body {
 .ts-score { color: var(--muted); margin-bottom: 16px; }
 .ts-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
+/* ── Juego 4: Trivial (tablero) ── */
+.triv-wrap { display: flex; gap: 18px; max-width: 900px; margin: 0 auto; padding: 14px 16px 40px; align-items: flex-start; flex-wrap: wrap; }
+.triv-boardwrap { flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.triv-board { width: 100%; max-width: 420px; }
+.triv-svg { width: 100%; height: auto; display: block; }
+.triv-space-em { font-size: 13px; }
+.triv-token-t { font-size: 9px; font-weight: 800; fill: #0a1a28; }
+.triv-pie-lbl { font-size: 15px; font-weight: 800; fill: #fff; }
+.triv-ctrls { display: flex; align-items: center; gap: 14px; }
+.triv-dice { font-size: 42px; line-height: 1; min-width: 44px; text-align: center; }
+.triv-roll { padding: 12px 20px; }
+.triv-players { width: 260px; max-width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.triv-pl { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel2); padding: 8px 10px; flex-wrap: wrap; }
+.triv-pl.active { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.triv-pl-dot { width: 24px; height: 24px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; color: #0a1a28; }
+.triv-pl-name { font-weight: 700; font-size: 13px; flex: 1; }
+.triv-pl-count { font-size: 12px; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
+.triv-pl-wedges { display: flex; gap: 2px; flex-basis: 100%; margin-top: 2px; }
+.triv-pl-wedges .tw { width: 100%; height: 7px; border-radius: 2px; }
+.triv-quiz { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(6,9,15,.74); backdrop-filter: blur(6px); }
+.triv-quiz[hidden] { display: none; }
+.triv-quiz-card { width: min(480px,100%); background: linear-gradient(180deg,var(--panel),var(--bg2)); border: 1px solid var(--line);
+  border-top: 4px solid var(--tc, var(--gold)); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; max-height: 92vh; overflow-y: auto; }
+.tq-cat { font-weight: 800; font-size: 13px; color: var(--tc, var(--gold)); margin-bottom: 10px; }
+.triv-quiz-card .tc-q { font-weight: 700; margin-bottom: 12px; }
+.triv-end { text-align: center; } .triv-end .ts-emoji { font-size: 52px; } .triv-end h2 { margin: 6px 0; }
+@media (max-width: 720px) { .triv-players { width: 100%; } }
+
 /* ── Intro ── */
 .intro-card { width: min(640px,100%); }
 .intro-lead { color: var(--muted); font-size: 14.5px; line-height: 1.55; margin: 6px 0 14px; }

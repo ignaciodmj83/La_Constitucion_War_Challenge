@@ -4,6 +4,20 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.9.0] — 2026-07-10
+
+### Cambiado (Trivial → tablero tipo Trivial Pursuit)
+- El juego **Trivial** pasa de rondas de preguntas a un **tablero circular** al
+  estilo Trivial Pursuit: **11 quesitos** (uno por título de la Constitución) en
+  vez de las 6 categorías clásicas.
+- **Dado, turnos** y **3 jugadores virtuales** (IA de distinto nivel) que
+  compiten y **avanzan solos sin mostrar sus preguntas**; su acierto se resuelve
+  por su nivel. Las casillas del tablero tienen el color y el emblema de su
+  título; al caer en una respondes una pregunta de ese título y, si aciertas y
+  aún no lo tienes, ganas su quesito. Gana quien reúne los 11.
+- La maestría de Trivial en las estadísticas pasa a basarse en los quesitos
+  conseguidos (11/11 = 100%).
+
 ## [2.8.0] — 2026-07-10
 
 ### Añadido (estadísticas unificadas en el menú)

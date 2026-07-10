@@ -34,8 +34,8 @@ Al abrir la app eliges entre varios modos de estudiar la Constitución:
   aciertas de qué trata eligiendo de una lista breve (con niveles de dificultad).
 - 🏛️ **Tribunal** — simulación del Tribunal Constitucional: sé abogado/a o
   juez/a en casos reales anclados a artículos concretos.
-- ❓ **Trivial** — preguntas tipo test sobre la Constitución, en rondas con
-  puntuación, racha y récord.
+- ❓ **Trivial** — tablero tipo *Trivial Pursuit* con dado, turnos y jugadores
+  virtuales; un quesito por cada título de la Constitución.
 
 ## ¿Qué es esto?
 

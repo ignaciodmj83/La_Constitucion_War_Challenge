@@ -92,15 +92,24 @@
   <div id="tribStage" class="trib-stage"></div>
 </div>
 
-<!-- Juego 4: Trivial -->
+<!-- Juego 4: Trivial (tablero tipo Trivial Pursuit) -->
 <div id="trivial" class="game-screen" hidden>
   <header class="mem-top">
     <button id="trivBack" class="mem-back" title="Volver al menú">⬅️ Menú</button>
-    <div class="mem-heading">❓ Trivial</div>
-    <div class="trib-role" id="trivScore"></div>
-    <div class="mem-prog"><span id="trivProg">1/12</span></div>
+    <div class="mem-heading">❓ Trivial de la Constitución</div>
+    <div class="trib-role" id="trivTurn"></div>
   </header>
-  <div id="trivStage" class="trib-stage"></div>
+  <div class="triv-wrap">
+    <div class="triv-boardwrap">
+      <div id="trivBoard" class="triv-board"></div>
+      <div class="triv-ctrls">
+        <span id="trivDice" class="triv-dice"></span>
+        <button id="trivRoll" class="primary-btn triv-roll">🎲 Tirar el dado</button>
+      </div>
+    </div>
+    <div id="trivPlayers" class="triv-players"></div>
+  </div>
+  <div id="trivQuiz" class="triv-quiz" hidden></div>
 </div>
 
 <header id="topbar">
