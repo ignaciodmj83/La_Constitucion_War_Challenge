@@ -41,12 +41,14 @@
 
   const STOP = new Set(['y', 'e', 'o', 'u', 'de', 'del', 'la', 'las', 'los', 'el', 'en', 'con', 'a', 'al', 'por', 'para', 'su', 'sus', 'un', 'una']);
   function shortTitle(n) {
+    if (typeof ETIQUETAS !== 'undefined' && ETIQUETAS[n]) return ETIQUETAS[n]; // etiqueta de 3 palabras
     const t = (typeof ARTICLES !== 'undefined' && ARTICLES[n] && ARTICLES[n].t) || '';
     const w = t.replace(/[,.;:]/g, '').split(/\s+/).filter(Boolean).slice(0, 3);
     while (w.length > 1 && STOP.has(w[w.length - 1].toLowerCase())) w.pop();
     return w.join(' ');
   }
   function colorOf(n) { const tid = MAP.art.titulo[n]; return MAP.titulos[tid].color; }
+  function tituloOfN(n) { const t = MAP.titulos[MAP.art.titulo[n]]; return (t.roman ? 'Título ' + t.roman + ' · ' : '') + t.name; }
   function emojiOf(n) { return (ARTICLES[n].img && ARTICLES[n].img[0]) || '📜'; }
   function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   const sfxSafe = (k) => { try { if (typeof sfx !== 'undefined' && sfx[k]) sfx[k](); } catch { /* */ } };
@@ -85,46 +87,53 @@
   }
 
   function optionPool(n) {
-    const correct = shortTitle(n);
+    // devuelve pares {label, art} sin etiquetas repetidas; el artículo n va incluido
+    const map = new Map();
+    const add = (m) => { const lab = shortTitle(m); if (!map.has(lab)) map.set(lab, m); };
     if (mem.diff === 'facil') {
-      const set = new Set([correct]); let g = 0;
-      while (set.size < 5 && g++ < 800) { const m = 1 + Math.floor(Math.random() * 169); const s = shortTitle(m); if (s && s !== correct) set.add(s); }
-      return shuffle([...set]);
+      add(n); let g = 0;
+      while (map.size < 5 && g++ < 900) add(1 + Math.floor(Math.random() * 169));
+    } else if (mem.diff === 'medio') {
+      tituloArts(MAP.art.titulo[n]).forEach(add); add(n);
+    } else {
+      const matched = run().matched;
+      for (let m = 1; m <= 169; m++) if (!matched[m]) add(m);
+      add(n);
     }
-    if (mem.diff === 'medio') {
-      const set = new Set(tituloArts(MAP.art.titulo[n]).map(shortTitle)); set.add(correct);
-      return shuffle([...set]);
-    }
-    // difícil: todos los artículos menos los ya adivinados
-    const matched = run().matched; const set = new Set();
-    for (let m = 1; m <= 169; m++) { if (!matched[m]) set.add(shortTitle(m)); }
-    set.add(correct);
-    return shuffle([...set]);
+    map.set(shortTitle(n), n); // asegura que la etiqueta correcta apunta a n
+    return shuffle([...map.entries()].map(([label, art]) => ({ label, art })));
   }
   function openQuiz(n) {
     $('mqNum').textContent = n;
     $('mqNum').style.setProperty('--tc', colorOf(n));
-    const correct = shortTitle(n);
+    $('mqTitulo').textContent = tituloOfN(n);
     const box = $('mqOptions'); box.innerHTML = '';
-    optionPool(n).forEach((s) => {
-      const b = document.createElement('button'); b.className = 'mq-opt'; b.textContent = s;
-      b.addEventListener('click', () => {
-        if (b.disabled) return;
-        if (s === correct) {
-          b.classList.add('ok'); run().matched[n] = true; saveMem(); sfxSafe('correct');
-          [...box.children].forEach((c) => { c.disabled = true; });
-          setTimeout(() => {
-            $('memQuiz').hidden = true; buildMemGrid();
-            if (Object.keys(run().matched).length === 169) memVictory();
-          }, 460);
-        } else {
-          b.classList.add('bad'); b.disabled = true; run().fails++; saveMem(); sfxSafe('wrong'); updateLives();
-          if (run().fails > MDIFF[mem.diff].allow) { [...box.children].forEach((c) => { c.disabled = true; }); setTimeout(memGameOver, 550); }
-        }
-      });
-      box.appendChild(b);
+    optionPool(n).forEach(({ label, art }) => {
+      const row = document.createElement('div'); row.className = 'mq-row';
+      const opt = document.createElement('button'); opt.className = 'mq-opt'; opt.textContent = label; opt.dataset.art = art;
+      const info = document.createElement('button'); info.className = 'mq-info'; info.type = 'button'; info.textContent = 'ⓘ'; info.title = 'Ver el artículo';
+      const detail = document.createElement('div'); detail.className = 'mq-detail'; detail.hidden = true;
+      detail.innerHTML = `<b>Art. ${art} · ${ARTICLES[art].t}</b><br>${ARTICLES[art].e}`;
+      opt.addEventListener('click', () => onPick(art, n, box));
+      info.addEventListener('click', (e) => { e.stopPropagation(); detail.hidden = !detail.hidden; info.classList.toggle('open', !detail.hidden); });
+      const top = document.createElement('div'); top.className = 'mq-row-top';
+      top.appendChild(opt); top.appendChild(info);
+      row.appendChild(top); row.appendChild(detail); box.appendChild(row);
     });
-    $('memQuiz').hidden = false;
+    $('memQuiz').hidden = false; box.scrollTop = 0;
+  }
+  function onPick(art, n, box) {
+    const btn = [...box.querySelectorAll('.mq-opt')].find((o) => +o.dataset.art === art && !o.disabled);
+    if (!btn) return;
+    if (art === n) {
+      box.querySelectorAll('.mq-opt').forEach((o) => { o.disabled = true; });
+      btn.classList.add('ok'); run().matched[n] = true; saveMem(); sfxSafe('correct');
+      setTimeout(() => { $('memQuiz').hidden = true; buildMemGrid(); if (Object.keys(run().matched).length === 169) memVictory(); }, 480);
+    } else {
+      // fallo: solo se descarta esa opción (puedes reintentar); cuesta una vida
+      btn.classList.add('bad'); btn.disabled = true; run().fails++; saveMem(); sfxSafe('wrong'); updateLives();
+      if (run().fails > MDIFF[mem.diff].allow) { box.querySelectorAll('.mq-opt').forEach((o) => { o.disabled = true; }); setTimeout(memGameOver, 600); }
+    }
   }
   function memGameOver() {
     const got = Object.keys(run().matched).length;

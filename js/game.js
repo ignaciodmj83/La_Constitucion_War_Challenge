@@ -871,7 +871,7 @@ function renderIndex() {
         const a = ARTICLES[n]; const st = statusOf(n);
         const ic = st === 'owned' ? '✅' : st === 'attackable' ? '⚔️' : '🔒';
         return `<button class="ix-art ${st}" data-n="${n}">
-          <span class="ix-emoji">${(a.img && a.img[0]) || '📜'}</span>
+          <span class="ix-emoji" style="--tc:${MAP.titulos[MAP.art.titulo[n]].color}">${(a.img && a.img[0]) || '📜'}</span>
           <span class="ix-n">Art. ${n}</span>
           <span class="ix-t">${a.t}</span>
           <span class="ix-st">${ic}</span></button>`;
@@ -980,8 +980,13 @@ function bootGlobal() {
   lastPlayTs = Date.now();
   setInterval(playTick, 1000);
   setInterval(() => save(), 20000);
-  document.addEventListener('visibilitychange', () => { lastPlayTs = Date.now(); });
-  window.addEventListener('beforeunload', () => { playTick(); stopVoice(); save(); });
+  document.addEventListener('visibilitychange', () => {
+    lastPlayTs = Date.now();
+    if (document.hidden) { stopMusic(); stopVoice(); }        // minimizar / cambiar de pestaña → corta música
+    else if (S.music && !music.on) startMusic();              // al volver, reanuda si estaba activada
+  });
+  window.addEventListener('pagehide', () => { stopMusic(); stopVoice(); playTick(); save(); });
+  window.addEventListener('beforeunload', () => { stopMusic(); playTick(); stopVoice(); save(); });
   const unlockAudio = () => {
     try { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); } catch { /* */ }
     if (S.music && !music.on) startMusic();

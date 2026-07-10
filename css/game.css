@@ -289,7 +289,8 @@ body {
 .ix-art { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; border: none; background: transparent;
   color: var(--text); padding: 6px 8px; border-radius: 8px; cursor: pointer; font: inherit; }
 .ix-art:hover { background: rgba(255,255,255,.06); }
-.ix-art .ix-emoji { font-size: 19px; width: 24px; text-align: center; flex: none; }
+.ix-art .ix-emoji { font-size: 15px; width: 27px; height: 27px; flex: none; display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; background: var(--tc); box-shadow: inset 0 0 0 1px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.10); }
 .ix-art .ix-n { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; min-width: 52px; }
 .ix-art .ix-t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--muted); }
 .ix-art .ix-st { flex: none; font-size: 13px; }
@@ -376,14 +377,23 @@ body {
 .mem-quiz-card { width: min(460px, 100%); text-align: center; }
 .mq-num { width: 84px; height: 84px; margin: 4px auto 12px; border-radius: 18px; display: flex; align-items: center; justify-content: center;
   font-size: 40px; font-weight: 800; color: #fff; background: var(--tc, var(--gold)); box-shadow: 0 6px 16px rgba(0,0,0,.45); paint-order: stroke; -webkit-text-stroke: 1px rgba(0,0,0,.3); }
-.mq-prompt { font-weight: 700; margin-bottom: 14px; }
+.mq-titulo { text-align: center; font-size: 12px; font-weight: 800; color: var(--gold); margin: -4px 0 8px; }
+.mq-prompt { font-weight: 700; margin-bottom: 14px; text-align: center; }
 .mq-options { display: flex; flex-direction: column; gap: 8px; }
-.mq-opt { border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 11px; padding: 13px 14px;
+.mq-row { display: flex; flex-direction: column; }
+.mq-row-top { display: flex; gap: 6px; align-items: stretch; }
+.mq-opt { flex: 1; border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 11px; padding: 13px 14px;
   font: inherit; font-weight: 600; cursor: pointer; text-align: center; transition: border-color .1s; }
 .mq-opt:hover:not(:disabled) { border-color: var(--gold); }
 .mq-opt.ok { background: #1f6f43; border-color: #3fbf6f; color: #fff; }
 .mq-opt.bad { background: #6f2626; border-color: var(--danger); color: #fff; opacity: .85; }
 .mq-opt:disabled { cursor: default; }
+.mq-info { flex: none; width: 40px; border: 1px solid var(--line); background: var(--panel2); color: var(--muted); border-radius: 11px;
+  font-size: 15px; cursor: pointer; }
+.mq-info:hover, .mq-info.open { border-color: var(--gold); color: var(--gold); }
+.mq-detail { font-size: 12px; line-height: 1.45; color: var(--muted); background: rgba(255,255,255,.03); border: 1px solid var(--line);
+  border-radius: 9px; padding: 8px 11px; margin: 5px 0 2px; }
+.mq-detail b { color: var(--text); }
 
 /* ── Juego 3: Tribunal ── */
 .trib-role { flex: 1; font-weight: 700; font-size: 13px; color: var(--gold); }

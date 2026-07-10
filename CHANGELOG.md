@@ -4,6 +4,20 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.6.1] — 2026-07-10
+
+### Arreglado / mejorado
+- **La música se corta al minimizar o cerrar** la app (evento de visibilidad y
+  cierre de página) y se reanuda al volver si estaba activada.
+- **Memorión**: las etiquetas de las opciones son ahora **siempre de 3 palabras**
+  y redactadas a mano para ser realmente identificativas (169 etiquetas propias).
+- **Memorión**: al abrir una carta se muestra el **título** al que pertenece el
+  artículo, y cada opción tiene un botón **ⓘ** que despliega el **texto del
+  artículo** en pequeño (para estudiar/comprobar sin salir).
+- **Índice (Conquista)**: cada artículo muestra su **símbolo oficial** dentro de
+  una insignia con el **color de su reino** (coherente con los escudos), y los
+  títulos siguen con su emblema oficial.
+
 ## [2.6.0] — 2026-07-09
 
 ### Añadido (Juego 3: Tribunal)
