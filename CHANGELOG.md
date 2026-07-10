@@ -4,6 +4,21 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.8.0] — 2026-07-10
+
+### Añadido (estadísticas unificadas en el menú)
+- Nueva pantalla de **Estadísticas** accesible desde el **menú principal**, con
+  **filtro por juego** (Conquista, Memorión, Tribunal, Trivial) y **Todos**.
+- **KPI Dominio**: mide lo bien que te sabes la Constitución como **media de tu
+  maestría en los 4 juegos**. Cada juego solo llega al 100% a su **máxima
+  dificultad**, así que el 100% global exige ser maestro en los 4 al máximo.
+  Incluye el desglose por juego.
+- **KPI Frescura**: lo reciente de esa valoración; decae con los días sin jugar
+  (semivida ~15 días), con etiqueta ("Medido ayer", "Hace un mes"…).
+- **KPI Esfuerzo**: curva suave de tu tiempo de estudio por día (últimos 30 días).
+- Cada juego registra sus máximos por dificultad para alimentar el Dominio, y la
+  actividad reciente marca la Frescura.
+
 ## [2.7.0] — 2026-07-10
 
 ### Añadido

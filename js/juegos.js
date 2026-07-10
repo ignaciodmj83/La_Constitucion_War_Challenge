@@ -32,9 +32,9 @@
   };
   let mem = loadMem();
   function loadMem() {
-    try { const o = JSON.parse(localStorage.getItem(MEM_KEY)); if (o && o.runs) return o; } catch { /* */ }
+    try { const o = JSON.parse(localStorage.getItem(MEM_KEY)); if (o && o.runs) { o.hi = o.hi || {}; return o; } } catch { /* */ }
     let old = null; try { old = JSON.parse(localStorage.getItem('ce78_memoria_v1')); } catch { /* */ }
-    return { diff: 'facil', runs: { facil: { matched: (old && old.matched) || {}, fails: 0 }, medio: { matched: {}, fails: 0 }, dificil: { matched: {}, fails: 0 } } };
+    return { diff: 'facil', hi: {}, runs: { facil: { matched: (old && old.matched) || {}, fails: 0 }, medio: { matched: {}, fails: 0 }, dificil: { matched: {}, fails: 0 } } };
   }
   function saveMem() { try { localStorage.setItem(MEM_KEY, JSON.stringify(mem)); } catch { /* */ } }
   function run() { return mem.runs[mem.diff]; }
@@ -141,7 +141,10 @@
     if (!btn) return;
     if (art === n) {
       box.querySelectorAll('.mq-opt').forEach((o) => { o.disabled = true; });
-      btn.classList.add('ok'); run().matched[n] = true; saveMem(); sfxSafe('correct');
+      btn.classList.add('ok'); run().matched[n] = true;
+      const c = Object.keys(run().matched).length; mem.hi[mem.diff] = Math.max(mem.hi[mem.diff] || 0, c);
+      saveMem(); sfxSafe('correct');
+      if (typeof touchActivity === 'function') touchActivity(); if (typeof save === 'function') save();
       setTimeout(() => { $('memQuiz').hidden = true; buildMemGrid(); if (Object.keys(run().matched).length === 169) memVictory(); }, 480);
     } else {
       // fallo: solo se descarta esa opción (puedes reintentar); cuesta una vida

@@ -345,6 +345,44 @@ body {
 .game-card .gc-go { font-weight: 800; color: var(--gold); font-size: 13px; margin-top: 4px; }
 .game-card.soon { opacity: .5; cursor: not-allowed; }
 .game-card.soon .gc-go { color: var(--muted); }
+.menu-stats-btn { display: block; width: 100%; margin-top: 14px; padding: 12px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--panel2); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
+.menu-stats-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ── Estadísticas ── */
+.stats-stage { max-width: 640px; margin: 0 auto; padding: 14px 16px 48px; display: flex; flex-direction: column; gap: 12px; }
+.stf-chip { border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 999px; padding: 8px 12px;
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.stf-chip.sel { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+#statsFilter { flex-wrap: wrap; }
+.kpi-main { display: flex; gap: 16px; align-items: center; border: 1px solid var(--line); border-radius: 16px; padding: 16px;
+  background: linear-gradient(180deg, rgba(227,169,63,.10), rgba(255,255,255,.02)); }
+.kpi-ring-wrap { flex: none; width: 120px; }
+.kpi-ring { width: 120px; height: 120px; }
+.ring-bg { fill: none; stroke: rgba(255,255,255,.12); stroke-width: 11; }
+.ring-fg { fill: none; stroke-width: 11; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 65px 65px; transition: stroke-dashoffset .6s ease; }
+.ring-val { fill: #fff; font-size: 30px; font-weight: 800; text-anchor: middle; dominant-baseline: middle; }
+.kpi-text { flex: 1; min-width: 0; }
+.kpi-title { font-size: 17px; font-weight: 800; }
+.kpi-sub { font-size: 12.5px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
+.kpi-extra { font-size: 12.5px; color: var(--muted); margin-top: 8px; } .kpi-extra b { color: var(--text); }
+.kpi-bar { height: 9px; border-radius: 999px; background: #2a3850; overflow: hidden; }
+.kpi-bar-fill { height: 100%; border-radius: 999px; transition: width .5s ease; }
+.st-breakdown { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.st-game { border: 1px solid var(--line); border-radius: 11px; background: var(--panel2); padding: 10px 12px; }
+.st-game-head { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 7px; }
+.st-detail { border: 1px solid var(--line); border-radius: 12px; background: var(--panel2); padding: 6px 14px; }
+.st-line { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; border-bottom: 1px solid var(--line); }
+.st-line:last-child { border-bottom: none; } .st-line b { color: var(--gold); font-variant-numeric: tabular-nums; }
+.kpi-card { border: 1px solid var(--line); border-radius: 14px; background: var(--panel2); padding: 13px 15px; }
+.kpi-card-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 800; font-size: 13.5px; margin-bottom: 8px; }
+.kpi-card-head b { font-variant-numeric: tabular-nums; }
+.kpi-card-foot { font-size: 11.5px; color: var(--muted); margin-top: 7px; line-height: 1.45; }
+.effort-chart { width: 100%; height: 130px; display: block; }
+.ef-base { stroke: rgba(255,255,255,.16); stroke-width: 1.5; }
+.ef-area { fill: url(#efg); stroke: none; }
+.ef-line { fill: none; stroke: var(--gold); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.ef-x { fill: var(--muted); font-size: 9px; text-anchor: middle; }
 
 /* ── Juego 2: Memorión ── */
 .game-screen { position: fixed; inset: 0; z-index: 40; background: var(--bg); overflow-y: auto; }

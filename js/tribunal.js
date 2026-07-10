@@ -229,6 +229,10 @@
     },
   ];
 
+  const TKEY = 'ce78_tribunal_v1';
+  function loadBest() { try { return JSON.parse(localStorage.getItem(TKEY)) || { best: {}, total: CASOS.length }; } catch { return { best: {}, total: CASOS.length }; } }
+  function saveBest(b) { try { localStorage.setItem(TKEY, JSON.stringify(b)); } catch { /* */ } }
+
   let T = { mode: 'abogado', order: [], i: 0, wins: 0, answered: false };
 
   function renderModeBar() {
@@ -278,7 +282,7 @@
       else if (ch.textContent === op.t) ch.classList.add('bad');
     });
     const correct = op.ok;
-    if (correct) { T.wins++; sfxSafe('correct'); markMastered(c.arts); } else sfxSafe('wrong');
+    if (correct) { T.wins++; sfxSafe('correct'); markMastered(c.arts); if (typeof touchActivity === 'function') touchActivity(); } else sfxSafe('wrong');
     const fb = $('tcFeedback'); fb.hidden = false; fb.className = 'tc-feedback ' + (correct ? 'ok' : 'bad');
     fb.innerHTML = `
       <div class="fb-verdict">${correct ? '✅ ' + (T.mode === 'abogado' ? '¡Buen alegato!' : '¡Fallo acertado!') : '❌ No es lo más acertado'}</div>
@@ -290,6 +294,9 @@
   }
   function summary() {
     const pct = Math.round(T.wins / CASOS.length * 100);
+    const b = loadBest(); b.total = CASOS.length; b.best = b.best || {};
+    b.best[T.mode] = Math.max(b.best[T.mode] || 0, T.wins); saveBest(b);
+    if (typeof save === 'function') save();
     const veredicto = pct >= 80 ? '🏆 Toga de honor' : pct >= 50 ? '⚖️ Letrado/a solvente' : '📚 Necesitas más sala';
     $('tribStage').innerHTML = `
       <div class="trib-case trib-summary">

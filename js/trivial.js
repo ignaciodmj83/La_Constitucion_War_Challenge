@@ -12,7 +12,7 @@
   function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   const RONDA = 12;
   const KEY = 'ce78_trivial_v1';
-  let best = (() => { try { return JSON.parse(localStorage.getItem(KEY)) || { best: 0 }; } catch { return { best: 0 }; } })();
+  let best = (() => { try { return JSON.parse(localStorage.getItem(KEY)) || { best: 0, bestCorrect: 0 }; } catch { return { best: 0, bestCorrect: 0 }; } })();
   function saveBest() { try { localStorage.setItem(KEY, JSON.stringify(best)); } catch { /* */ } }
 
   let TV = { order: [], i: 0, score: 0, streak: 0, correct: 0, answered: false };
@@ -56,7 +56,7 @@
     });
     if (correct) {
       TV.correct++; TV.streak++; TV.score += 10 + Math.min(TV.streak - 1, 5) * 2;
-      sfxSafe('correct'); markMastered(n);
+      sfxSafe('correct'); markMastered(n); if (typeof touchActivity === 'function') touchActivity();
     } else { TV.streak = 0; sfxSafe('wrong'); }
     updateHud();
     const fb = $('tvFeedback'); fb.hidden = false; fb.className = 'tc-feedback ' + (correct ? 'ok' : 'bad');
@@ -69,7 +69,10 @@
   }
   function summary() {
     const record = TV.score > best.best;
-    if (record) { best.best = TV.score; saveBest(); }
+    if (record) best.best = TV.score;
+    best.bestCorrect = Math.max(best.bestCorrect || 0, TV.correct);
+    saveBest();
+    if (typeof save === 'function') save();
     const rank = TV.correct >= 11 ? '🏆 Constitucionalista' : TV.correct >= 8 ? '🎖️ Buen/a jurista' : TV.correct >= 5 ? '📚 Aprobado/a' : '🌱 A seguir estudiando';
     $('trivStage').innerHTML = `
       <div class="trib-case trib-summary">

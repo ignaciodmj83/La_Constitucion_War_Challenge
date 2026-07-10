@@ -72,7 +72,7 @@ function defaultState() {
     daily: { streak: 1, last: todayKey() },
     ach: [], sound: true, music: false, voice: true, seenIntro: false,
     difficulty: 'normal', lastLossTs: Date.now(),
-    stats: { answers: 0, correct: 0, conquests: 0, defenses: 0, fastest: null, prepared: 0, playMs: 0, mastered: {}, best: {}, days: {} },
+    stats: { answers: 0, correct: 0, conquests: 0, defenses: 0, fastest: null, prepared: 0, playMs: 0, mastered: {}, best: {}, days: {}, hiConq: {}, lastActive: 0 },
   };
 }
 function loadState() {
@@ -88,6 +88,8 @@ function loadState() {
     if (!s.stats.mastered) s.stats.mastered = {};
     if (!s.stats.best) s.stats.best = {};
     if (!s.stats.days) s.stats.days = {};
+    if (!s.stats.hiConq) s.stats.hiConq = {};
+    if (!s.stats.lastActive) s.stats.lastActive = 0;
     return s;
   } catch { return defaultState(); }
 }
@@ -646,6 +648,10 @@ function nextStep() {
 
 function conquer(n) {
   S.owned[n] = true; S.stats.conquests++; const tid = MAP.art.titulo[n]; refreshMemory(tid);
+  // marca de máximo histórico de territorios por dificultad (para el KPI de Dominio)
+  const ownedCount = Object.keys(S.owned).filter((k) => S.owned[k]).length;
+  S.stats.hiConq[S.difficulty] = Math.max(S.stats.hiConq[S.difficulty] || 0, ownedCount);
+  touchActivity();
   unlock('first');
   const c = MAP.art.center[n];
   if (tituloConquered(tid)) {
@@ -760,6 +766,10 @@ function fmtDuration(ms) {
   if (m) return `${m} min ${sec} s`;
   return `${sec} s`;
 }
+/* marca de actividad (última vez que demostraste conocimiento en cualquier juego) */
+function touchActivity() { try { S.stats.lastActive = Date.now(); } catch { /* */ } }
+window.touchActivity = touchActivity;
+
 /* contador de tiempo de juego (solo mientras la pestaña está visible) */
 let lastPlayTs = Date.now();
 function playTick() {
@@ -932,7 +942,7 @@ function renderSettings() {
 function init() {
   buildMap(); renderHud(); checkDaily();
   $('btnAch').addEventListener('click', () => { closeAll(); showAchievements(); });
-  $('btnStats').addEventListener('click', () => { closeAll(); showStats(); });
+  $('btnStats').addEventListener('click', () => { closeAll(); if (typeof openStats === 'function') openStats('all'); else showStats(); });
   $('btnIndex').addEventListener('click', () => { closeAll(); renderIndex(); $('indexModal').hidden = false; });
   $('btnSettings').addEventListener('click', () => { closeAll(); renderSettings(); $('settingsModal').hidden = false; });
   $('prepSpeak').addEventListener('click', () => { if (PREP) speakArticle(PREP.arts[PREP.i]); });

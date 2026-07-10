@@ -43,7 +43,19 @@
         <span class="gc-go">Jugar ▸</span>
       </button>
     </div>
+    <button id="menuStats" class="menu-stats-btn">📊 Ver mis estadísticas</button>
   </div>
+</div>
+
+<!-- Estadísticas -->
+<div id="estadisticas" class="game-screen" hidden>
+  <header class="mem-top">
+    <button id="statsBack" class="mem-back" title="Volver al menú">⬅️ Menú</button>
+    <div class="mem-heading">📊 Estadísticas</div>
+    <div class="mem-prog"></div>
+  </header>
+  <div class="mem-diffbar" id="statsFilter"></div>
+  <div id="statsStage" class="stats-stage"></div>
 </div>
 
 <!-- Juego 2: Memorión -->
@@ -292,6 +304,7 @@
 <script src="js/game.js"></script>
 <script src="js/tribunal.js"></script>
 <script src="js/trivial.js"></script>
+<script src="js/estadisticas.js"></script>
 <script src="js/juegos.js"></script>
 </body>
 </html>
