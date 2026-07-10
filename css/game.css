@@ -297,6 +297,19 @@ body {
 .ix-art.owned .ix-t { color: var(--text); }
 .ix-art.locked { opacity: .6; }
 
+/* ── Sistema de estudio (pantalla completa desde el menú) ── */
+.estudio-sub { max-width: 900px; margin: 12px auto 4px; padding: 0 16px; }
+.estudio-tree { max-width: 900px; margin: 0 auto; padding: 10px 16px 48px; flex: none; overflow: visible; }
+.ix-art-row { border-radius: 8px; overflow: hidden; }
+.ix-art-row .ix-caret { flex: none; color: var(--muted); font-size: 12px; transition: transform .15s; }
+.ix-art-row.open .ix-caret { transform: rotate(90deg); }
+.ix-art-row.open > .ix-art { background: rgba(255,255,255,.06); }
+.ix-detail { padding: 8px 10px 12px 46px; }
+.ix-detail-txt { margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: var(--text); }
+.ix-speak { border: 1px solid var(--line); background: var(--panel2); color: var(--gold); border-radius: 9px;
+  padding: 6px 12px; font: inherit; font-weight: 700; font-size: 12.5px; cursor: pointer; }
+.ix-speak:hover { border-color: var(--gold); }
+
 /* ── Ajustes ── */
 .settings-card { width: min(560px,100%); }
 .settings-body { display: flex; flex-direction: column; gap: 18px; margin-top: 10px; }
@@ -348,6 +361,10 @@ body {
 .menu-stats-btn { display: block; width: 100%; margin-top: 14px; padding: 12px; border-radius: 12px; border: 1px solid var(--line);
   background: var(--panel2); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
 .menu-stats-btn:hover { border-color: var(--gold); color: var(--gold); }
+.menu-study-btn { display: block; width: 100%; margin-top: 16px; padding: 13px; border-radius: 12px; border: 1px solid var(--gold);
+  background: linear-gradient(180deg, rgba(227,169,63,.16), rgba(227,169,63,.05)); color: var(--gold);
+  font: inherit; font-weight: 800; cursor: pointer; }
+.menu-study-btn:hover { background: linear-gradient(180deg, rgba(227,169,63,.26), rgba(227,169,63,.09)); }
 
 /* ── Estadísticas ── */
 .stats-stage { max-width: 640px; margin: 0 auto; padding: 14px 16px 48px; display: flex; flex-direction: column; gap: 12px; }
@@ -414,9 +431,13 @@ body {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; transition: transform .1s; }
 .mem-card:hover { transform: translateY(-2px); }
 .mem-card .mc-n.big { font-size: 20px; font-weight: 800; }
-.mem-card.done { background: var(--tc); border-color: rgba(255,255,255,.35); box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
-.mem-card.done .mc-emoji { font-size: 22px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
-.mem-card.done .mc-n { font-size: 11px; font-weight: 700; opacity: .92; paint-order: stroke; }
+.mem-card.done { background: var(--tc); border-color: rgba(255,255,255,.35); box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+  aspect-ratio: auto; min-height: 72px; padding: 7px 4px; justify-content: flex-start; gap: 1px; }
+.mem-card.done .mc-emoji { font-size: 20px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+.mem-card.done .mc-n { font-size: 11px; font-weight: 800; opacity: .92; paint-order: stroke; }
+.mem-card.done .mc-txt { font-size: 9px; line-height: 1.16; font-weight: 700; text-align: center; margin-top: 1px;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.55); }
 .mem-quiz-card { width: min(460px, 100%); text-align: center; }
 .mq-num { width: 84px; height: 84px; margin: 4px auto 12px; border-radius: 18px; display: flex; align-items: center; justify-content: center;
   font-size: 40px; font-weight: 800; color: #fff; background: var(--tc, var(--gold)); box-shadow: 0 6px 16px rgba(0,0,0,.45); paint-order: stroke; -webkit-text-stroke: 1px rgba(0,0,0,.3); }

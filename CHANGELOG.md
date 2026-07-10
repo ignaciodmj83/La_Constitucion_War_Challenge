@@ -4,6 +4,24 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.9.3] — 2026-07-10
+
+### Cambiado (símbolos únicos, color único, estudio en el menú, Memorión)
+- **Símbolos de artículo únicos e irrepetibles:** cada uno de los 169 artículos
+  tiene ahora un símbolo distinto (antes 33 símbolos se repetían en 100
+  artículos). Se reasignaron 67 emblemas manteniendo su sentido temático, para
+  no confundir al estudiante al memorizarlos.
+- **Patrón de color de los títulos unificado:** `hierarchy.js` es la única fuente
+  de verdad del color de cada título; el mapa se sincroniza en carga, de modo que
+  un título tiene exactamente el mismo color en todos los juegos y pantallas.
+- **Sistema de estudio en el menú principal:** el índice completo de la
+  Constitución (títulos → capítulos → artículos, con su símbolo único) se traslada
+  del juego de Conquista al menú principal como pantalla propia "📖 Estudia la
+  Constitución". Cada artículo se despliega para leer su texto y escucharlo en voz
+  alta. Se retira el botón 🗂️ de la barra de Conquista.
+- **Memorión:** cada tarjeta descubierta muestra ahora el texto del artículo
+  (además del número y su símbolo), reforzando la asociación número ↔ contenido.
+
 ## [2.9.2] — 2026-07-10
 
 ### Cambiado (Trivial: refuerzo de memoria y más casillas)

@@ -88,7 +88,7 @@
           card.className = 'mem-card' + (done ? ' done' : '');
           card.style.setProperty('--tc', colorOf(n));
           card.innerHTML = done
-            ? `<span class="mc-emoji">${emojiOf(n)}</span><span class="mc-n">${n}</span>`
+            ? `<span class="mc-emoji">${emojiOf(n)}</span><span class="mc-n">${n}</span><span class="mc-txt">${ARTICLES[n].t}</span>`
             : `<span class="mc-n big">${n}</span>`;
           card.addEventListener('click', () => openQuiz(n));
           cards.appendChild(card);
@@ -165,8 +165,57 @@
   }
   function startMemoria() { hideMenu(); mem = loadMem(); renderDiffBar(); buildMemGrid(); $('memoria').hidden = false; }
 
+  /* ── Sistema de estudio: índice completo de la Constitución (títulos → capítulos → artículos) ── */
+  function buildEstudio() {
+    const tree = $('estudioTree'); if (!tree) return;
+    tree.innerHTML = TITULOS.map((t) => {
+      const arts = artsOfTitulo(t.id);
+      const emblem = MAP.titulos[t.id].emblem || t.emblem || (t.faction && t.faction.unit) || '📜';
+      const multi = t.islands.length > 1;
+      const body = t.islands.map((is) => {
+        const rows = ((MAP.islands[is.id] && MAP.islands[is.id].arts) || []).map((n) => {
+          const a = ARTICLES[n];
+          return `<div class="ix-art-row" data-n="${n}">
+            <button class="ix-art" type="button">
+              <span class="ix-emoji" style="--tc:${colorOf(n)}">${emojiOf(n)}</span>
+              <span class="ix-n">Art. ${n}</span>
+              <span class="ix-t">${a.t}</span>
+              <span class="ix-caret">▸</span>
+            </button>
+            <div class="ix-detail" hidden>
+              <p class="ix-detail-txt">${a.e}</p>
+              <button class="ix-speak" type="button" data-n="${n}">🗣️ Escuchar</button>
+            </div>
+          </div>`;
+        }).join('');
+        return (multi ? `<div class="ix-cap">${is.name}</div>` : '') + rows;
+      }).join('');
+      return `<div class="ix-titulo" data-tid="${t.id}">
+        <button class="ix-sum" type="button">
+          <span class="ix-arrow">▸</span>
+          <span class="ix-emblem" style="background:${t.color}">${emblem}</span>
+          <span class="ix-tname">${t.roman ? t.roman + '. ' : ''}${t.name}</span>
+          <span class="ix-prog">${arts.length} art.</span></button>
+        <div class="ix-body">${body}</div></div>`;
+    }).join('');
+    tree.querySelectorAll('.ix-sum').forEach((b) => b.addEventListener('click', () => {
+      b.parentElement.classList.toggle('open'); sfxSafe('click');
+    }));
+    tree.querySelectorAll('.ix-art').forEach((b) => b.addEventListener('click', () => {
+      const row = b.parentElement; const open = !row.classList.contains('open');
+      row.classList.toggle('open', open);
+      const d = row.querySelector('.ix-detail'); if (d) d.hidden = !open;
+      sfxSafe('click');
+    }));
+    tree.querySelectorAll('.ix-speak').forEach((b) => b.addEventListener('click', (e) => {
+      e.stopPropagation(); if (typeof speakArticle === 'function') speakArticle(+b.dataset.n); sfxSafe('click');
+    }));
+    $('estudioProg').textContent = '11 títulos · 169 art.';
+  }
+  function startEstudio() { hideMenu(); buildEstudio(); $('estudio').hidden = false; }
+
   /* ── cableado ── */
-  function hideAllScreens() { ['memoria', 'tribunal', 'trivial'].forEach((id) => { const el = $(id); if (el) el.hidden = true; }); }
+  function hideAllScreens() { ['memoria', 'tribunal', 'trivial', 'estudio'].forEach((id) => { const el = $(id); if (el) el.hidden = true; }); }
   menu.querySelectorAll('.game-card[data-game]').forEach((b) => b.addEventListener('click', () => {
     const g = b.dataset.game; sfxSafe('click'); hideAllScreens();
     if (g === 'risk') startRisk();
@@ -178,6 +227,10 @@
   const btnMenu = $('btnMenu');
   if (btnMenu) btnMenu.addEventListener('click', () => { hideAllScreens(); showMenu(); sfxSafe('click'); });
   $('memBack').addEventListener('click', () => { $('memoria').hidden = true; showMenu(); sfxSafe('click'); });
+  const btnEstudio = $('menuEstudio');
+  if (btnEstudio) btnEstudio.addEventListener('click', () => { sfxSafe('click'); hideAllScreens(); startEstudio(); });
+  const estBack = $('estudioBack');
+  if (estBack) estBack.addEventListener('click', () => { $('estudio').hidden = true; if (typeof stopVoice === 'function') stopVoice(); showMenu(); sfxSafe('click'); });
   const mqClose = $('memQuiz').querySelector('.card-close');
   if (mqClose) mqClose.addEventListener('click', () => { $('memQuiz').hidden = true; });
 

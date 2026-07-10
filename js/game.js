@@ -30,6 +30,16 @@ const DIFFICULTIES = {
 function diff() { return DIFFICULTIES[S.difficulty] || DIFFICULTIES.normal; }
 function qSeconds() { return diff().secs; }
 
+/* Fuente única de color por título: hierarchy.js (TITULOS). El mapa (map-data.js)
+   guarda una copia generada; la sincronizamos en carga para que TODOS los juegos
+   y pantallas usen exactamente el mismo patrón de colores y no confundir al estudiante. */
+(function syncTituloColors() {
+  try {
+    if (typeof TITULOS === 'undefined' || typeof MAP === 'undefined' || !MAP.titulos) return;
+    TITULOS.forEach((t) => { if (MAP.titulos[t.id]) MAP.titulos[t.id].color = t.color; });
+  } catch { /* */ }
+})();
+
 const RANKS = [
   [1, 'Ciudadano/a'], [4, 'Elector/a'], [8, 'Concejal/a'], [12, 'Alcalde/sa'],
   [18, 'Diputado/a'], [25, 'Senador/a'], [33, 'Ministro/a'],
@@ -809,7 +819,7 @@ function prestige() {
 }
 
 /* ───────────────────────── Modales ───────────────────────── */
-function closeAll() { stopVoice(); for (const id of ['preBattle', 'battleEnd', 'achModal', 'statsModal', 'settingsModal', 'indexModal', 'introModal', 'victoryModal', 'prep']) $(id).hidden = true; }
+function closeAll() { stopVoice(); for (const id of ['preBattle', 'battleEnd', 'achModal', 'statsModal', 'settingsModal', 'introModal', 'victoryModal', 'prep']) { const el = $(id); if (el) el.hidden = true; } }
 function showAchievements() {
   $('achList').innerHTML = ACHIEVEMENTS.map((a) => { const g = S.ach.includes(a.id); return `<div class="ach ${g ? '' : 'locked'}"><span class="a-icon">${g ? a.icon : '🔒'}</span><div><div class="a-name">${a.name}</div><div class="a-desc">${a.desc}</div></div><span class="a-pts">${g ? '✓ ' : ''}+${a.pts}</span></div>`; }).join('');
   $('achModal').hidden = false;
@@ -869,43 +879,6 @@ function showStats() {
   $('statsModal').hidden = false;
 }
 
-/* ───────────────────────── Índice desplegable (títulos → capítulos → artículos) ───────────────────────── */
-function renderIndex() {
-  const tree = $('indexTree'); if (!tree) return;
-  tree.innerHTML = TITULOS.map((t) => {
-    const arts = artsOfTitulo(t.id); const owned = arts.filter((n) => S.owned[n]).length;
-    const emblem = MAP.titulos[t.id].emblem || t.emblem || t.faction.unit;
-    const multi = t.islands.length > 1;
-    const body = t.islands.map((is) => {
-      const rows = MAP.islands[is.id].arts.map((n) => {
-        const a = ARTICLES[n]; const st = statusOf(n);
-        const ic = st === 'owned' ? '✅' : st === 'attackable' ? '⚔️' : '🔒';
-        return `<button class="ix-art ${st}" data-n="${n}">
-          <span class="ix-emoji" style="--tc:${MAP.titulos[MAP.art.titulo[n]].color}">${(a.img && a.img[0]) || '📜'}</span>
-          <span class="ix-n">Art. ${n}</span>
-          <span class="ix-t">${a.t}</span>
-          <span class="ix-st">${ic}</span></button>`;
-      }).join('');
-      return (multi ? `<div class="ix-cap">${is.name}</div>` : '') + rows;
-    }).join('');
-    return `<div class="ix-titulo ${owned > 0 ? 'open' : ''}" data-tid="${t.id}">
-      <button class="ix-sum" type="button">
-        <span class="ix-arrow">▸</span>
-        <span class="ix-emblem" style="background:${t.color}">${emblem}</span>
-        <span class="ix-tname">${t.roman ? t.roman + '. ' : ''}${t.name}</span>
-        <span class="ix-prog">${owned}/${arts.length}</span></button>
-      <div class="ix-body">${body}</div></div>`;
-  }).join('');
-  tree.querySelectorAll('.ix-sum').forEach((b) => b.addEventListener('click', () => {
-    b.parentElement.classList.toggle('open'); sfx.click();
-  }));
-  tree.querySelectorAll('.ix-art').forEach((b) => b.addEventListener('click', () => {
-    const n = +b.dataset.n; $('indexModal').hidden = true; sfx.click();
-    focusArticle(n, 520);
-    if (statusOf(n) !== 'locked') openPreBattle(n);
-  }));
-}
-
 /* ───────────────────────── Ajustes (dificultad, música, efectos, voz) ───────────────────────── */
 function renderSettings() {
   const box = $('settingsBody'); if (!box) return;
@@ -943,7 +916,6 @@ function init() {
   buildMap(); renderHud(); checkDaily();
   $('btnAch').addEventListener('click', () => { closeAll(); showAchievements(); });
   $('btnStats').addEventListener('click', () => { closeAll(); if (typeof openStats === 'function') openStats('all'); else showStats(); });
-  $('btnIndex').addEventListener('click', () => { closeAll(); renderIndex(); $('indexModal').hidden = false; });
   $('btnSettings').addEventListener('click', () => { closeAll(); renderSettings(); $('settingsModal').hidden = false; });
   $('prepSpeak').addEventListener('click', () => { if (PREP) speakArticle(PREP.arts[PREP.i]); });
   $('fbSpeak').addEventListener('click', () => { if (B) speakArticle(B.n); });

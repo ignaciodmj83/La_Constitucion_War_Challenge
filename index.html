@@ -43,6 +43,7 @@
         <span class="gc-go">Jugar ▸</span>
       </button>
     </div>
+    <button id="menuEstudio" class="menu-study-btn">📖 Estudia la Constitución · índice completo</button>
     <button id="menuStats" class="menu-stats-btn">📊 Ver mis estadísticas</button>
   </div>
 </div>
@@ -131,7 +132,6 @@
   </div>
   <div class="topbar-actions">
     <button id="btnMenu" class="icon-btn" title="Menú de juegos">🎮</button>
-    <button id="btnIndex" class="icon-btn" title="Índice de la Constitución">🗂️</button>
     <button id="btnAch" class="icon-btn" title="Logros">🏆</button>
     <button id="btnStats" class="icon-btn" title="Estadísticas">📊</button>
     <button id="btnSettings" class="icon-btn" title="Ajustes (dificultad, música, voz)">⚙️</button>
@@ -263,14 +263,15 @@
   </div>
 </div>
 
-<!-- Índice de la Constitución -->
-<div id="indexModal" class="overlay" hidden>
-  <div class="card list-card index-card">
-    <button class="card-close" data-close="indexModal">✕</button>
-    <h2>🗂️ Índice de la Constitución</h2>
-    <p class="index-sub">Todos los títulos, capítulos y artículos con su símbolo. Pulsa un artículo para ir a su territorio en el mapa.</p>
-    <div id="indexTree" class="index-tree"></div>
-  </div>
+<!-- Sistema de estudio: índice de la Constitución -->
+<div id="estudio" class="game-screen" hidden>
+  <header class="mem-top">
+    <button id="estudioBack" class="mem-back" title="Volver al menú">⬅️ Menú</button>
+    <div class="mem-heading">📖 Estudia la Constitución</div>
+    <div class="mem-prog" id="estudioProg"></div>
+  </header>
+  <p class="index-sub estudio-sub">Todos los títulos, capítulos y artículos con su símbolo único. Pulsa un artículo para leer su texto y escucharlo en voz alta.</p>
+  <div id="estudioTree" class="index-tree estudio-tree"></div>
 </div>
 
 <!-- Intro -->
