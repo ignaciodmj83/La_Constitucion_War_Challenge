@@ -478,12 +478,14 @@ body {
 .triv-boardwrap { flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .triv-board { width: 100%; max-width: 420px; }
 .triv-svg { width: 100%; height: auto; display: block; }
+.triv-spoke { stroke: rgba(255,255,255,.14); stroke-width: 5; }
 .triv-space-em { font-size: 13px; }
 .triv-token-t { font-size: 9px; font-weight: 800; fill: #0a1a28; }
 .triv-pie-lbl { font-size: 15px; font-weight: 800; fill: #fff; }
-.triv-ctrls { display: flex; align-items: center; gap: 14px; }
+.triv-ctrls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; }
 .triv-dice { font-size: 42px; line-height: 1; min-width: 44px; text-align: center; }
-.triv-roll { padding: 12px 20px; }
+.triv-buttons { display: flex; gap: 8px; }
+.triv-buttons button { padding: 11px 18px; }
 .triv-players { width: 260px; max-width: 100%; display: flex; flex-direction: column; gap: 8px; }
 .triv-pl { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel2); padding: 8px 10px; flex-wrap: wrap; }
 .triv-pl.active { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }

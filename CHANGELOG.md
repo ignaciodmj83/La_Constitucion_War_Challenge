@@ -4,6 +4,19 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.9.1] — 2026-07-10
+
+### Cambiado (Trivial: rueda con radios y prueba final)
+- El tablero del Trivial pasa a **rueda con 11 radios**: la rueda exterior son
+  las casillas (en arcos de color por título) y en cada **unión radio↔rueda hay
+  una casilla especial (⭐) donde se captura el quesito** de ese título.
+- Al reunir los **11 quesitos** se activa el modo "al centro": avanzas por un
+  radio hasta el hub y respondes la **prueba final** (una pregunta por título,
+  las 11). Acertarlas todas antes que los rivales = victoria; si fallas una,
+  reintentas en tu siguiente turno.
+- Se puede elegir **dirección** del dado (◀ / ▶) para maniobrar hacia los
+  quesitos; la IA también navega y disputa la prueba final.
+
 ## [2.9.0] — 2026-07-10
 
 ### Cambiado (Trivial → tablero tipo Trivial Pursuit)
