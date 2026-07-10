@@ -71,17 +71,31 @@
   function buildMemGrid() {
     const grid = $('memGrid'); const matched = run().matched;
     grid.innerHTML = '';
-    for (let n = 1; n <= 169; n++) {
-      const done = !!matched[n];
-      const card = document.createElement('button');
-      card.className = 'mem-card' + (done ? ' done' : '');
-      card.style.setProperty('--tc', colorOf(n));
-      card.innerHTML = done
-        ? `<span class="mc-emoji">${emojiOf(n)}</span><span class="mc-n">${n}</span>`
-        : `<span class="mc-n big">${n}</span>`;
-      card.addEventListener('click', () => openQuiz(n));
-      grid.appendChild(card);
-    }
+    // agrupado por capítulo: cada capítulo (o título sin capítulos) va en su recuadro
+    TITULOS.forEach((t) => {
+      const multi = t.islands.length > 1;
+      t.islands.forEach((is) => {
+        const arts = (MAP.islands[is.id] && MAP.islands[is.id].arts) || [];
+        if (!arts.length) return;
+        const box = document.createElement('div'); box.className = 'mem-chapter'; box.style.setProperty('--tc', t.color);
+        const label = multi ? is.name : ((t.roman ? 'Título ' + t.roman + ' · ' : '') + t.name);
+        const head = document.createElement('div'); head.className = 'mem-ch-head';
+        head.innerHTML = `<span class="mem-ch-emblem">${MAP.titulos[t.id].emblem || ''}</span><span>${label}</span>`;
+        const cards = document.createElement('div'); cards.className = 'mem-ch-cards';
+        arts.forEach((n) => {
+          const done = !!matched[n];
+          const card = document.createElement('button');
+          card.className = 'mem-card' + (done ? ' done' : '');
+          card.style.setProperty('--tc', colorOf(n));
+          card.innerHTML = done
+            ? `<span class="mc-emoji">${emojiOf(n)}</span><span class="mc-n">${n}</span>`
+            : `<span class="mc-n big">${n}</span>`;
+          card.addEventListener('click', () => openQuiz(n));
+          cards.appendChild(card);
+        });
+        box.appendChild(head); box.appendChild(cards); grid.appendChild(box);
+      });
+    });
     $('memProg').textContent = `${Object.keys(matched).length}/169`;
     updateLives();
   }
@@ -149,12 +163,17 @@
   function startMemoria() { hideMenu(); mem = loadMem(); renderDiffBar(); buildMemGrid(); $('memoria').hidden = false; }
 
   /* ── cableado ── */
+  function hideAllScreens() { ['memoria', 'tribunal', 'trivial'].forEach((id) => { const el = $(id); if (el) el.hidden = true; }); }
   menu.querySelectorAll('.game-card[data-game]').forEach((b) => b.addEventListener('click', () => {
-    const g = b.dataset.game; sfxSafe('click');
+    const g = b.dataset.game; sfxSafe('click'); hideAllScreens();
     if (g === 'risk') startRisk();
     else if (g === 'memoria') startMemoria();
-    else if (g === 'tribunal' && typeof startTribunal === 'function') { $('memoria').hidden = true; startTribunal(); }
+    else if (g === 'tribunal' && typeof startTribunal === 'function') startTribunal();
+    else if (g === 'trivial' && typeof startTrivial === 'function') startTrivial();
   }));
+  // botón "Menú de juegos" desde la partida de Conquista
+  const btnMenu = $('btnMenu');
+  if (btnMenu) btnMenu.addEventListener('click', () => { hideAllScreens(); showMenu(); sfxSafe('click'); });
   $('memBack').addEventListener('click', () => { $('memoria').hidden = true; showMenu(); sfxSafe('click'); });
   const mqClose = $('memQuiz').querySelector('.card-close');
   if (mqClose) mqClose.addEventListener('click', () => { $('memQuiz').hidden = true; });

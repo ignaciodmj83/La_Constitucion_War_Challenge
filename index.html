@@ -36,11 +36,11 @@
         <span class="gc-desc">Simulación del Tribunal Constitucional: sé abogado/a o juez/a en casos reales.</span>
         <span class="gc-go">Jugar ▸</span>
       </button>
-      <button class="game-card soon" disabled>
-        <span class="gc-emoji">⏱️</span>
-        <span class="gc-name">Próximamente</span>
-        <span class="gc-desc">Nuevo modo de estudio en camino.</span>
-        <span class="gc-go">Muy pronto</span>
+      <button class="game-card" data-game="trivial">
+        <span class="gc-emoji">❓</span>
+        <span class="gc-name">Trivial</span>
+        <span class="gc-desc">Preguntas tipo test sobre la Constitución. ¿Cuántas aciertas seguidas?</span>
+        <span class="gc-go">Jugar ▸</span>
       </button>
     </div>
   </div>
@@ -80,6 +80,17 @@
   <div id="tribStage" class="trib-stage"></div>
 </div>
 
+<!-- Juego 4: Trivial -->
+<div id="trivial" class="game-screen" hidden>
+  <header class="mem-top">
+    <button id="trivBack" class="mem-back" title="Volver al menú">⬅️ Menú</button>
+    <div class="mem-heading">❓ Trivial</div>
+    <div class="trib-role" id="trivScore"></div>
+    <div class="mem-prog"><span id="trivProg">1/12</span></div>
+  </header>
+  <div id="trivStage" class="trib-stage"></div>
+</div>
+
 <header id="topbar">
   <div class="brand">
     <span class="brand-flag"></span>
@@ -98,6 +109,7 @@
     </div>
   </div>
   <div class="topbar-actions">
+    <button id="btnMenu" class="icon-btn" title="Menú de juegos">🎮</button>
     <button id="btnIndex" class="icon-btn" title="Índice de la Constitución">🗂️</button>
     <button id="btnAch" class="icon-btn" title="Logros">🏆</button>
     <button id="btnStats" class="icon-btn" title="Estadísticas">📊</button>
@@ -279,6 +291,7 @@
 <script src="js/etiquetas.js"></script>
 <script src="js/game.js"></script>
 <script src="js/tribunal.js"></script>
+<script src="js/trivial.js"></script>
 <script src="js/juegos.js"></script>
 </body>
 </html>

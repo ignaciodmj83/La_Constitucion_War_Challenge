@@ -4,6 +4,19 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.7.0] — 2026-07-10
+
+### Añadido
+- **Cuarto juego: Trivial** — preguntas tipo test sobre la Constitución (las de
+  los 169 artículos), en rondas de 12 al azar, con puntuación, racha y récord;
+  explicación al responder y los aciertos suman a la "Preparación".
+- **Botón de menú de juegos** en todas las pantallas: la partida de Conquista
+  tiene ahora un botón 🎮 para volver al menú principal (Memorión, Tribunal y
+  Trivial ya tenían "⬅️ Menú").
+- **Memorión**: los artículos se **agrupan en recuadros por capítulo** (o por
+  título si no tiene capítulos), con el color del reino y el nombre del capítulo,
+  para ver de un vistazo qué artículos pertenecen al mismo capítulo.
+
 ## [2.6.1] — 2026-07-10
 
 ### Arreglado / mejorado
