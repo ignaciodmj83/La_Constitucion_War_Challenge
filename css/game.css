@@ -499,7 +499,14 @@ body {
 .triv-quiz[hidden] { display: none; }
 .triv-quiz-card { width: min(480px,100%); background: linear-gradient(180deg,var(--panel),var(--bg2)); border: 1px solid var(--line);
   border-top: 4px solid var(--tc, var(--gold)); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; max-height: 92vh; overflow-y: auto; }
-.tq-cat { font-weight: 800; font-size: 13px; color: var(--tc, var(--gold)); margin-bottom: 10px; }
+.tq-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.tq-cat { font-weight: 800; font-size: 13px; color: var(--tc, var(--gold)); }
+.tq-art { display: inline-flex; align-items: center; gap: 6px; flex: none; white-space: nowrap;
+  font-weight: 800; font-size: 12px; color: var(--text); background: rgba(255,255,255,.06);
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px 3px 3px; }
+.tq-sym { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px;
+  border-radius: 50%; font-size: 13px; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+@media (max-width: 420px) { .tq-head { flex-wrap: wrap; } }
 .triv-quiz-card .tc-q { font-weight: 700; margin-bottom: 12px; }
 .triv-end { text-align: center; } .triv-end .ts-emoji { font-size: 52px; } .triv-end h2 { margin: 6px 0; }
 @media (max-width: 720px) { .triv-players { width: 100%; } }

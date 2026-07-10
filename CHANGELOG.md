@@ -4,6 +4,19 @@ Todas las versiones relevantes del proyecto se anotan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/)
 y el proyecto usa [versionado semántico](https://semver.org/lang/es/) (MAYOR.MENOR.PARCHE).
 
+## [2.9.2] — 2026-07-10
+
+### Cambiado (Trivial: refuerzo de memoria y más casillas)
+- Cada **pregunta muestra el artículo** al que corresponde y su **símbolo**
+  (píldora "Art. N" con el emblema coloreado del título) para reforzar la
+  memorización, tanto en las preguntas normales como en la prueba final.
+- Las **casillas intermedias** de la rueda (entre quesitos) ahora llevan
+  **títulos aleatorios intercalados**, no solo el del quesito contiguo.
+- Los **radios también tienen casillas** (2 por radio) con su emblema de título;
+  se avanza por ellas camino al centro.
+- Las **casillas de quesito son más grandes** (⭐, con aro dorado punteado) que
+  las intermedias, para distinguirlas de un vistazo.
+
 ## [2.9.1] — 2026-07-10
 
 ### Cambiado (Trivial: rueda con radios y prueba final)
