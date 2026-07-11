@@ -15,7 +15,11 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 let html = read('index.html');
 const css = read('css/game.css');
-const js = ['js/map-data.js', 'js/hierarchy.js', 'js/data.js', 'js/voz.js', 'js/etiquetas.js', 'js/personajes.js', 'js/game.js', 'js/tribunal.js', 'js/trivial.js', 'js/estadisticas.js', 'js/juegos.js'].map(read).join('\n\n');
+// Lista de scripts derivada del propio index.html (en orden), para que el
+// bundle nunca se quede desincronizado al añadir o quitar un módulo.
+const jsFiles = [...html.matchAll(/<script src="(js\/[^"]+)"><\/script>/g)].map((m) => m[1]);
+if (!jsFiles.length) throw new Error('build.js: no se encontró ningún <script src="js/..."> en index.html');
+const js = jsFiles.map(read).join('\n\n');
 
 // Sustituir la hoja de estilos externa por un bloque <style> en línea
 html = html.replace(/<link[^>]+game\.css[^>]*>/, `<style>\n${css}\n</style>`);
