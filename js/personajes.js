@@ -82,11 +82,27 @@
     document.body.appendChild(host);
     return host;
   }
+  /* ¿El retrato tiene fondo transparente? Solo entonces puede mostrarse
+     recortado a lo grande, como asistente al pie de la pantalla (efecto
+     visual-novel). Se comprueba el borde superior de la imagen una vez y
+     se recuerda el resultado por personaje. */
+  const RECORTABLE = {};
+  function esRecortable(img) {
+    try {
+      const c = document.createElement('canvas'); c.width = 12; c.height = 12;
+      const x = c.getContext('2d'); x.drawImage(img, 0, 0, 12, 12);
+      const d = x.getImageData(0, 0, 12, 2).data;
+      let alfa = 0; for (let i = 3; i < d.length; i += 4) alfa += d[i];
+      return alfa < 24 * 255 * 0.4; // franja superior mayormente transparente
+    } catch { return false; }
+  }
   function showSpeaking(tid, text) {
     const p = pjOf(tid); if (!p) return;
     const h = ensureHost();
     h.style.setProperty('--tc', p.color);
+    h.classList.toggle('has-actor', RECORTABLE[tid] === true);
     h.innerHTML = `
+      <img class="pj-actor" src="${p.img}" alt="" aria-hidden="true">
       <div class="pj-speak-card">
         <button class="pj-speak-close" title="Cerrar">✕</button>
         <div class="pj-speaker">
@@ -98,6 +114,12 @@
         </div>
         <div class="pj-bubble"><span class="pj-bubble-dots"><i></i><i></i><i></i></span><p class="pj-bubble-txt">${text}</p></div>
       </div>`;
+    const actor = h.querySelector('.pj-actor');
+    if (RECORTABLE[tid] === undefined) {
+      const decide = () => { RECORTABLE[tid] = esRecortable(actor); h.classList.toggle('has-actor', RECORTABLE[tid]); };
+      if (actor.complete && actor.naturalWidth) decide();
+      else { actor.addEventListener('load', decide); actor.addEventListener('error', () => { RECORTABLE[tid] = false; }); }
+    }
     h.hidden = false;
     requestAnimationFrame(() => h.classList.add('show'));
     clearTimeout(hideTimer);
