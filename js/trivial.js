@@ -36,6 +36,13 @@
   const AI_SKILL = [0, 0.55, 0.68, 0.8];
   const pjAvatar = (tid, px) => (typeof PERSONAJES !== 'undefined') ? PERSONAJES.avatar(tid, px) : '';
 
+  const TDIFF = {
+    facil: { name: 'Fácil', emoji: '🌱', factor: 0.7, desc: 'rivales despistados' },
+    medio: { name: 'Medio', emoji: '⚔️', factor: 1, desc: 'rivales serios' },
+    dificil: { name: 'Difícil', emoji: '🔥', factor: 1.22, desc: 'rivales expertos' },
+  };
+  if (!TDIFF[store.diff]) store.diff = 'medio';
+
   let T = null, SPTIT = [], SPKTIT = [];
   function genSpaces() {
     SPTIT = []; for (let i = 0; i < RING; i++) SPTIT[i] = isHQ(i) ? hqTit(i) : Math.floor(Math.random() * SEG);
@@ -43,7 +50,17 @@
   }
   function newGame() {
     genSpaces();
-    T = { players: PLAYER_NAMES.map((name, i) => ({ name, tid: PLAYER_TID[i], color: PLAYER_COLORS[i], loc: 'ring', i: 0, k: 0, depth: 0, wedges: new Set(), ai: i > 0, skill: AI_SKILL[i], homing: false })), turn: 0, busy: false, over: false, dieShown: 0 };
+    const factor = TDIFF[store.diff].factor;
+    T = { players: PLAYER_NAMES.map((name, i) => ({ name, tid: PLAYER_TID[i], color: PLAYER_COLORS[i], loc: 'ring', i: 0, k: 0, depth: 0, wedges: new Set(), ai: i > 0, skill: Math.min(0.95, AI_SKILL[i] * factor), homing: false })), turn: 0, busy: false, over: false, dieShown: 0 };
+  }
+  function renderDiffBar() {
+    const bar = $('trivDiffBar'); if (!bar) return;
+    bar.innerHTML = Object.entries(TDIFF).map(([k, d]) =>
+      `<button class="mem-diff ${store.diff === k ? 'sel' : ''}" data-td="${k}"><b>${d.emoji} ${d.name}</b><small>${d.desc}</small></button>`).join('');
+    bar.querySelectorAll('.mem-diff').forEach((b) => b.addEventListener('click', () => {
+      if (store.diff === b.dataset.td) return;
+      store.diff = b.dataset.td; saveStore(); sfxSafe('click'); startTrivial();
+    }));
   }
   const nodePos = (p) => p.loc === 'center' ? [C, C] : p.loc === 'spoke' ? spokePos(p.k, p.depth) : ringPos(p.i);
   const titOfNode = (p) => p.loc === 'ring' ? SPTIT[p.i] : p.loc === 'spoke' ? SPKTIT[p.k][p.depth] : -1;
@@ -62,20 +79,48 @@
   }
   function applyStep(p, s) { p.loc = s.loc; if (s.i != null) p.i = s.i; if (s.k != null) p.k = s.k; if (s.depth != null) p.depth = s.depth; }
 
-  /* ── tablero ── */
-  function space(svg, x, y, r, t, hq) {
-    const g = el('g', {});
-    if (hq) g.appendChild(el('circle', { cx: x, cy: y, r: r + 4, fill: 'none', stroke: '#f2e2b0', 'stroke-width': 2.5, 'stroke-dasharray': '4 3' }));
-    g.appendChild(el('circle', { cx: x, cy: y, r, fill: t.color, stroke: '#0a1a28', 'stroke-width': 2 }));
-    const tx = el('text', { x, y: y + r * 0.32, 'text-anchor': 'middle', class: 'triv-space-em', style: `font-size:${(r * 0.95).toFixed(0)}px` }); tx.textContent = MAP.titulos[t.id].emblem || '';
-    g.appendChild(tx); svg.appendChild(g);
+  /* ── tablero (rueda clásica tipo Trivial Pursuit) ── */
+  const angleOf = (i) => -Math.PI / 2 + (i / RING) * 2 * Math.PI;
+  function sectorPath(a0, a1, r0, r1) {
+    const p = (a, r) => [C + r * Math.cos(a), C + r * Math.sin(a)];
+    const [x0, y0] = p(a0, r1), [x1, y1] = p(a1, r1), [x2, y2] = p(a1, r0), [x3, y3] = p(a0, r0);
+    return `M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r1} ${r1} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} L ${x2.toFixed(1)} ${y2.toFixed(1)} A ${r0} ${r0} 0 0 0 ${x3.toFixed(1)} ${y3.toFixed(1)} Z`;
   }
   function buildBoard() {
     const wrap = $('trivBoard'); wrap.innerHTML = '';
     const svg = el('svg', { viewBox: `0 0 ${VB} ${VB}`, class: 'triv-svg' });
-    for (let k = 0; k < SEG; k++) { const [hx, hy] = ringPos(HQ(k)); svg.appendChild(el('line', { x1: C, y1: C, x2: hx, y2: hy, class: 'triv-spoke' })); }
-    for (let i = 0; i < RING; i++) { const [x, y] = ringPos(i); space(svg, x, y, isHQ(i) ? 19 : 12, tit(SPTIT[i]), isHQ(i)); }
-    for (let k = 0; k < SEG; k++) for (let d = 1; d <= SPOKE_LEN; d++) { const [x, y] = spokePos(k, d); space(svg, x, y, 11, tit(SPKTIT[k][d]), false); }
+    // base de la rueda
+    svg.appendChild(el('circle', { cx: C, cy: C, r: RR + 32, class: 'triv-base' }));
+    svg.appendChild(el('circle', { cx: C, cy: C, r: RR + 27, class: 'triv-base-line' }));
+    // radios: pista + casillas rectangulares orientadas al centro
+    for (let k = 0; k < SEG; k++) {
+      const a = angleOf(HQ(k)); const deg = a * 180 / Math.PI + 90;
+      const [hx, hy] = ringPos(HQ(k));
+      svg.appendChild(el('line', { x1: C, y1: C, x2: hx, y2: hy, class: 'triv-spoke' }));
+      for (let d = 1; d <= SPOKE_LEN; d++) {
+        const [x, y] = spokePos(k, d); const t = tit(SPKTIT[k][d]);
+        const g = el('g', { transform: `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${deg.toFixed(1)})` });
+        g.appendChild(el('rect', { x: -14, y: -10.5, width: 28, height: 21, rx: 4, fill: t.color, class: 'triv-cell' }));
+        const tx = el('text', { x: 0, y: 3.6, 'text-anchor': 'middle', class: 'triv-space-em', style: 'font-size:11px' });
+        tx.textContent = MAP.titulos[t.id].emblem || ''; g.appendChild(tx);
+        svg.appendChild(g);
+      }
+    }
+    // corona exterior: cada casilla es un sector anular de color (las de quesito, más altas y con ⭐)
+    const half = Math.PI / RING;
+    for (let i = 0; i < RING; i++) {
+      const t = tit(SPTIT[i]); const hq = isHQ(i); const a = angleOf(i);
+      const r0 = hq ? RR - 21 : RR - 14, r1 = hq ? RR + 21 : RR + 14;
+      svg.appendChild(el('path', { d: sectorPath(a - half, a + half, r0, r1), fill: t.color, class: hq ? 'triv-cell triv-hq' : 'triv-cell' }));
+      const [x, y] = ringPos(i);
+      const tx = el('text', { x, y: y + (hq ? 4.6 : 4), 'text-anchor': 'middle', class: 'triv-space-em', style: `font-size:${hq ? 15 : 11}px` });
+      tx.textContent = MAP.titulos[t.id].emblem || ''; svg.appendChild(tx);
+      if (hq) {
+        const sx = C + (RR + 29) * Math.cos(a), sy = C + (RR + 29) * Math.sin(a);
+        const st = el('text', { x: sx, y: sy + 4, 'text-anchor': 'middle', style: 'font-size:12px' }); st.textContent = '⭐';
+        svg.appendChild(st);
+      }
+    }
     svg.appendChild(el('g', { id: 'trivPie' }));
     svg.appendChild(el('g', { id: 'trivTokens' }));
     wrap.appendChild(svg); updateBoard();
@@ -102,13 +147,17 @@
     });
   }
   function renderPlayers() {
-    $('trivPlayers').innerHTML = T.players.map((p, i) => `
-      <div class="triv-pl ${i === T.turn ? 'active' : ''}">
-        <span class="triv-pl-av" style="--tc:${p.color}">${pjAvatar(p.tid, 30) || `<span class="triv-pl-dot" style="background:${p.color}">${p.name[0]}</span>`}</span>
-        <span class="triv-pl-name">${p.name}${p.ai ? '' : ' (tú)'}${p.homing ? ' 🎯' : ''}</span>
+    // el jugador con el turno se muestra con su retrato ampliado
+    $('trivPlayers').innerHTML = T.players.map((p, i) => {
+      const enTurno = i === T.turn;
+      return `
+      <div class="triv-pl ${enTurno ? 'active' : ''}">
+        <span class="triv-pl-av" style="--tc:${p.color}">${pjAvatar(p.tid, enTurno ? 58 : 30) || `<span class="triv-pl-dot" style="background:${p.color}">${p.name[0]}</span>`}</span>
+        <span class="triv-pl-name">${p.name}${p.homing ? ' 🎯' : ''}</span>
         <span class="triv-pl-count">${p.wedges.size}/11</span>
         <span class="triv-pl-wedges">${TITULOS.map((t) => `<span class="tw" style="background:${p.wedges.has(t.id) ? t.color : '#2a3850'}"></span>`).join('')}</span>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   /* ── controles / turnos ── */
@@ -242,7 +291,7 @@
   }
 
   function backToMenu() { $('trivial').hidden = true; $('gameMenu').hidden = false; sfxSafe('click'); }
-  function startTrivial() { $('gameMenu').hidden = true; $('trivQuiz').hidden = true; newGame(); buildBoard(); renderPlayers(); setTurn(); $('trivial').hidden = false; }
+  function startTrivial() { $('gameMenu').hidden = true; $('trivQuiz').hidden = true; renderDiffBar(); newGame(); buildBoard(); renderPlayers(); setTurn(); $('trivial').hidden = false; }
   window.startTrivial = startTrivial;
   const back = $('trivBack'); if (back) back.addEventListener('click', backToMenu);
 })();

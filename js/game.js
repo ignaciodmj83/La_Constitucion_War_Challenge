@@ -224,8 +224,24 @@ function stopMusic() {
 
 /* ───────────────────────── Voz (explica el artículo, Web Speech API) ───────────────────────── */
 function stopVoice() { try { window.speechSynthesis && speechSynthesis.cancel(); } catch { /* */ } if (typeof window.pjOnSpeakEnd === 'function') window.pjOnSpeakEnd(); }
-function pickVoice() {
-  try { const vs = speechSynthesis.getVoices(); return vs.find((v) => /es[-_]ES/i.test(v.lang)) || vs.find((v) => /^es/i.test(v.lang)) || null; } catch { return null; }
+/* Cada guardián habla con su propio timbre. Si el sistema tiene varias voces
+   en español se usan voces distintas (femenina/masculina); si solo hay una,
+   se diferencia con tono y velocidad. */
+const PERFIL_VOZ = {
+  mujer: { genero: 'f', pitch: 1.22, rate: 1.0 },
+  joven: { genero: 'm', pitch: 1.1, rate: 1.06 },
+  viejo: { genero: 'm', pitch: 0.7, rate: 0.86 },
+};
+function vocesES() {
+  try { return speechSynthesis.getVoices().filter((v) => /^es/i.test(v.lang)); } catch { return []; }
+}
+function pickVoice(genero) {
+  const vs = vocesES(); if (!vs.length) return null;
+  const fem = /m(o|ó)nica|luc(i|í)a|paulina|helena|laura|elvira|conchita|pen(e|é)lope|marisol|sabina|female|mujer|Google español/i;
+  const mas = /jorge|enrique|diego|(a|á)lvaro|carlos|pablo|ra(u|ú)l|andr(e|é)s|male|hombre/i;
+  const re = genero === 'f' ? fem : mas;
+  return vs.find((v) => re.test(v.name) && /es[-_]ES/i.test(v.lang)) || vs.find((v) => re.test(v.name))
+    || vs.find((v) => /es[-_]ES/i.test(v.lang)) || vs[0];
 }
 function speakArticle(n) {
   if (!('speechSynthesis' in window)) { toast('Tu navegador no soporta la lectura en voz alta.'); return; }
@@ -240,8 +256,10 @@ function speakArticle(n) {
     text = `Artículo ${n}, ${marco}. ${a.t}. ${a.e}`;
   }
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'es-ES'; u.rate = 1; u.pitch = 1;
-  const v = pickVoice(); if (v) u.voice = v;
+  const guard = (typeof PERSONAJES !== 'undefined') ? PERSONAJES.of(t.id) : null;
+  const perfil = PERFIL_VOZ[(guard && guard.voz) || 'joven'] || PERFIL_VOZ.joven;
+  u.lang = 'es-ES'; u.rate = perfil.rate; u.pitch = perfil.pitch;
+  const v = pickVoice(perfil.genero); if (v) u.voice = v;
   // Capa visual de personajes: muestra al personaje del título "hablando".
   if (typeof window.pjOnSpeak === 'function') window.pjOnSpeak(n, text);
   u.onend = () => { if (typeof window.pjOnSpeakEnd === 'function') window.pjOnSpeakEnd(); };
@@ -549,7 +567,7 @@ function startPrep(islandId) {
   PREP = { islandId, i: 0, arts: meta.arts.slice(), tid: t.id };   // meta.arts ya viene expandido
   $('prepColor').style.setProperty('--tc', t.color);
   const guard = (typeof PERSONAJES !== 'undefined') ? PERSONAJES.of(t.id) : null;
-  if (guard) { $('prepProfEmoji').innerHTML = PERSONAJES.avatar(t.id, 48); $('prepProfName').textContent = guard.name; }
+  if (guard) { $('prepProfEmoji').innerHTML = PERSONAJES.frame(t.id, 'prep-prof'); $('prepProfName').textContent = guard.name; }
   else { $('prepProfEmoji').textContent = t.prof.emoji; $('prepProfName').textContent = t.prof.name; }
   $('prepFaction').textContent = meta.name;
   $('prep').hidden = false; renderPrepCard();
@@ -920,12 +938,21 @@ function renderSettings() {
 function init() {
   buildMap(); renderHud(); checkDaily();
   $('btnAch').addEventListener('click', () => { closeAll(); showAchievements(); });
-  $('btnStats').addEventListener('click', () => { closeAll(); if (typeof openStats === 'function') openStats('all'); else showStats(); });
-  $('btnSettings').addEventListener('click', () => { closeAll(); renderSettings(); $('settingsModal').hidden = false; });
   $('prepSpeak').addEventListener('click', () => { if (PREP) speakArticle(PREP.arts[PREP.i]); });
   $('fbSpeak').addEventListener('click', () => { if (B) speakArticle(B.n); });
-  $('btnHelp').addEventListener('click', () => { closeAll(); $('introModal').hidden = false; });
   $('btnSound').addEventListener('click', () => { S.sound = !S.sound; renderHud(); save(); });
+  // Dificultad de la Conquista: botón que cicla 🌱→⚔️→🔥 (ajustes completos en Mi cuenta)
+  const bDiff = $('btnDiff');
+  if (bDiff) {
+    const orden = Object.keys(DIFFICULTIES);
+    const pinta = () => { bDiff.textContent = diff().emoji; bDiff.title = `Dificultad: ${diff().name} (pulsa para cambiar)`; };
+    pinta();
+    bDiff.addEventListener('click', () => {
+      S.difficulty = orden[(orden.indexOf(S.difficulty) + 1) % orden.length];
+      S.lastLossTs = Date.now(); save(); refreshMap(); pinta();
+      toast(`${diff().emoji} Dificultad: ${diff().name}`); sfx.click();
+    });
+  }
   $('btnIntroOk').addEventListener('click', () => { S.seenIntro = true; save(); $('introModal').hidden = true; sfx.click(); });
   $('prepPrev').addEventListener('click', () => prepStep(-1));
   $('prepNext').addEventListener('click', () => prepStep(1));

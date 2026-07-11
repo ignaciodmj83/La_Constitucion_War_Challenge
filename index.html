@@ -12,6 +12,9 @@
 <!-- Menú de juegos -->
 <div id="gameMenu" class="menu-overlay">
   <div class="menu-card">
+    <button id="menuCuenta" class="menu-cuenta" title="Mi cuenta">
+      <span class="mc-avatar">👤</span><span id="menuCuentaName">Invitado</span>
+    </button>
     <div class="menu-brand">
       <span class="brand-flag"></span>
       <h1>La Constitución: WarChallenge</h1>
@@ -43,8 +46,34 @@
         <span class="gc-go">Jugar ▸</span>
       </button>
     </div>
-    <button id="menuEstudio" class="menu-study-btn">📖 Estudia la Constitución · índice completo</button>
-    <button id="menuStats" class="menu-stats-btn">📊 Ver mis estadísticas</button>
+    <div class="menu-bottom">
+      <button id="menuEstudio" class="menu-big-btn">
+        <span class="mb-icon">📖</span>
+        <span class="mb-txt"><b>Estudiar</b><small>El Consejo Constituyente</small></span>
+      </button>
+      <button id="menuStats" class="menu-big-btn">
+        <span class="mb-icon">📊</span>
+        <span class="mb-txt"><b>Estadísticas</b><small>Tu progreso</small></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Mi cuenta -->
+<div id="cuentaModal" class="overlay" hidden>
+  <div class="card list-card cuenta-card">
+    <button class="card-close" data-close="cuentaModal">✕</button>
+    <h2>👤 Mi cuenta</h2>
+    <div id="cuentaBody"></div>
+  </div>
+</div>
+
+<!-- ¿Quién juega? (autenticación) -->
+<div id="loginModal" class="overlay" hidden>
+  <div class="card list-card login-card">
+    <button class="card-close" data-close="loginModal">✕</button>
+    <h2>👤 ¿Quién juega?</h2>
+    <div id="loginBody"></div>
   </div>
 </div>
 
@@ -90,6 +119,7 @@
     <div class="mem-prog"><span id="tribProg">Caso 1</span></div>
   </header>
   <div class="mem-diffbar" id="tribModeBar"></div>
+  <div class="mem-diffbar" id="tribDiffBar"></div>
   <div id="tribStage" class="trib-stage"></div>
 </div>
 
@@ -100,6 +130,7 @@
     <div class="mem-heading">❓ Trivial de la Constitución</div>
     <div class="trib-role" id="trivTurn"></div>
   </header>
+  <div class="mem-diffbar" id="trivDiffBar"></div>
   <div class="triv-wrap">
     <div class="triv-boardwrap">
       <div id="trivBoard" class="triv-board"></div>
@@ -114,6 +145,7 @@
 </div>
 
 <header id="topbar">
+  <button id="btnMenu" class="mem-back" title="Volver al menú">⬅️ Menú</button>
   <div class="brand">
     <span class="brand-flag"></span>
     <div class="brand-text">
@@ -131,12 +163,9 @@
     </div>
   </div>
   <div class="topbar-actions">
-    <button id="btnMenu" class="icon-btn" title="Menú de juegos">🎮</button>
+    <button id="btnDiff" class="icon-btn" title="Dificultad">⚔️</button>
     <button id="btnAch" class="icon-btn" title="Logros">🏆</button>
-    <button id="btnStats" class="icon-btn" title="Estadísticas">📊</button>
-    <button id="btnSettings" class="icon-btn" title="Ajustes (dificultad, música, voz)">⚙️</button>
     <button id="btnSound" class="icon-btn" title="Sonido">🔊</button>
-    <button id="btnHelp" class="icon-btn" title="Cómo se juega">❓</button>
   </div>
 </header>
 
@@ -274,6 +303,23 @@
   <div id="estudioTree" class="index-tree estudio-tree"></div>
 </div>
 
+<!-- Lectura de un artículo (estudio) -->
+<div id="estArtModal" class="overlay" hidden>
+  <div class="card est-art-card">
+    <button class="card-close" data-close="estArtModal">✕</button>
+    <div class="est-art-head">
+      <span id="estArtEmoji" class="est-art-emoji">📜</span>
+      <div>
+        <div id="estArtNum" class="est-art-num">Artículo 1</div>
+        <h2 id="estArtTitle" class="est-art-title"></h2>
+        <small id="estArtWhere" class="est-art-where"></small>
+      </div>
+    </div>
+    <div id="estArtBody" class="est-art-body"></div>
+    <button id="estArtSpeak" class="speak-btn" title="Escuchar el artículo">🗣️ Escuchar el artículo</button>
+  </div>
+</div>
+
 <!-- Intro -->
 <div id="introModal" class="overlay" hidden>
   <div class="card intro-card">
@@ -312,6 +358,7 @@
 <script src="js/voz.js"></script>
 <script src="js/etiquetas.js"></script>
 <script src="js/personajes.js"></script>
+<script src="js/cuenta.js"></script>
 <script src="js/game.js"></script>
 <script src="js/tribunal.js"></script>
 <script src="js/trivial.js"></script>

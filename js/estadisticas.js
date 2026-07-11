@@ -51,9 +51,28 @@
     for (let i = n - 1; i >= 0; i--) {
       const d = new Date(base); d.setDate(base.getDate() - i);
       const k = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-      out.push({ dom: d.getDate(), month: d.getMonth() + 1, min: (days[k] || 0) / 60000 });
+      out.push({ dom: d.getDate(), month: d.getMonth() + 1, dow: d.getDay(), min: (days[k] || 0) / 60000 });
     }
     return out;
+  }
+
+  /* ── media de juego diario de la última semana (7 días, ceros incluidos) ── */
+  const DOW = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+  function weekCard() {
+    const days = lastDays(7);
+    const total = days.reduce((s, d) => s + d.min, 0);
+    const media = total / 7;
+    const max = Math.max(10, ...days.map((d) => d.min));
+    const bars = days.map((d) => `
+      <div class="wk-day" title="${d.dom}/${d.month}: ${Math.round(d.min)} min">
+        <div class="wk-bar"><div class="wk-fill ${d.min > 0 ? '' : 'cero'}" style="height:${Math.max(4, (d.min / max) * 100)}%"></div></div>
+        <span class="wk-lbl">${DOW[d.dow]}</span>
+      </div>`).join('');
+    return `<div class="kpi-card kpi-week">
+      <div class="kpi-card-head"><span>📅 Media de juego diario · última semana</span><b class="wk-media">${media >= 10 ? Math.round(media) : media.toFixed(1)} min/día</b></div>
+      <div class="wk-bars">${bars}</div>
+      <div class="kpi-card-foot">Total de la semana: ${Math.round(total)} min · ${days.filter((d) => d.min > 0).length} de 7 días jugados.</div>
+    </div>`;
   }
   function smoothPath(pts) {
     if (pts.length < 2) return pts.length ? `M ${pts[0][0]} ${pts[0][1]}` : '';
@@ -146,6 +165,7 @@
         <div class="kpi-text"><div class="kpi-title">${kpiTitle}</div><div class="kpi-sub">${kpiSub}</div>
           <div class="kpi-extra">📚 Artículos vistos con acierto: <b>${mastered}/169</b></div></div>
       </div>
+      ${weekCard()}
       ${detail}
       <div class="kpi-card">
         <div class="kpi-card-head"><span>🕒 Frescura de la valoración</span><b style="color:${fr.pct >= 60 ? '#3fbf6f' : fr.pct >= 30 ? 'var(--gold)' : 'var(--danger)'}">${Math.round(fr.pct)}%</b></div>
