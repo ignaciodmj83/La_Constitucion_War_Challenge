@@ -96,6 +96,14 @@
       return alfa < 24 * 255 * 0.4; // franja superior mayormente transparente
     } catch { return false; }
   }
+  /* Consulta asíncrona reutilizable: ¿este guardián tiene retrato recortado? */
+  function recortable(tid, cb) {
+    if (RECORTABLE[tid] !== undefined) { cb(RECORTABLE[tid]); return; }
+    const im = new Image();
+    im.onload = () => { RECORTABLE[tid] = esRecortable(im); cb(RECORTABLE[tid]); };
+    im.onerror = () => { RECORTABLE[tid] = false; cb(false); };
+    im.src = ASSET(tid);
+  }
   function showSpeaking(tid, text) {
     const p = pjOf(tid); if (!p) return;
     const h = ensureHost();
@@ -139,5 +147,5 @@
   window.pjOnSpeakEnd = function () { hideSpeaking(); };
 
   // API pública para los juegos.
-  window.PERSONAJES = { of: pjOf, list, portrait, frame, avatar, unidad: () => UNIDAD, showSpeaking, hideSpeaking };
+  window.PERSONAJES = { of: pjOf, list, portrait, frame, avatar, recortable, unidad: () => UNIDAD, showSpeaking, hideSpeaking };
 })();

@@ -166,55 +166,112 @@
   }
   function startMemoria() { hideMenu(); mem = loadMem(); renderDiffBar(); buildMemGrid(); $('memoria').hidden = false; }
 
-  /* ── Sistema de estudio: índice completo de la Constitución (títulos → capítulos → artículos) ── */
-  function buildEstudio() {
+  /* ── Sistema de estudio ──
+     Vista 1: galería del Consejo Constituyente (un guardián por título).
+     Vista 2: al abrir un guardián, sus artículos como tarjetas ordenadas y
+     agrupadas por capítulo, con el personaje asomado en la esquina inferior.
+     Vista 3: el artículo se lee en una ficha maquetada, con cada subpunto
+     separado y las letras sangradas. */
+  let estVista = 'galeria';
+  const estSub = () => document.querySelector('.estudio-sub');
+
+  function buildEstudio() { renderEstGaleria(); }
+
+  function renderEstGaleria() {
+    estVista = 'galeria';
     const tree = $('estudioTree'); if (!tree) return;
-    tree.innerHTML = TITULOS.map((t) => {
-      const arts = artsOfTitulo(t.id);
-      const emblem = MAP.titulos[t.id].emblem || t.emblem || (t.faction && t.faction.unit) || '📜';
-      const multi = t.islands.length > 1;
-      const body = t.islands.map((is) => {
-        const rows = ((MAP.islands[is.id] && MAP.islands[is.id].arts) || []).map((n) => {
-          const a = ARTICLES[n];
-          return `<div class="ix-art-row" data-n="${n}">
-            <button class="ix-art" type="button">
-              <span class="ix-emoji" style="--tc:${colorOf(n)}">${emojiOf(n)}</span>
-              <span class="ix-n">Art. ${n}</span>
-              <span class="ix-t">${a.t}</span>
-              <span class="ix-caret">▸</span>
-            </button>
-            <div class="ix-detail" hidden>
-              <p class="ix-detail-txt">${a.e}</p>
-              <button class="ix-speak" type="button" data-n="${n}">🗣️ Escuchar</button>
-            </div>
-          </div>`;
-        }).join('');
-        return (multi ? `<div class="ix-cap">${is.name}</div>` : '') + rows;
-      }).join('');
-      const guard = (typeof PERSONAJES !== 'undefined') ? PERSONAJES.of(t.id) : null;
-      const icon = guard ? PERSONAJES.frame(t.id, 'ix-guard-frame') : `<span class="ix-emblem" style="background:${t.color}">${emblem}</span>`;
-      return `<div class="ix-titulo" data-tid="${t.id}">
-        <button class="ix-sum" type="button">
-          <span class="ix-arrow">▸</span>
-          ${icon}
-          <span class="ix-tname">${t.roman ? t.roman + '. ' : ''}${t.name}${guard ? `<small class="ix-guard">${guard.name}</small>` : ''}</span>
-          <span class="ix-prog">${arts.length} art.</span></button>
-        <div class="ix-body">${body}</div></div>`;
-    }).join('');
-    tree.querySelectorAll('.ix-sum').forEach((b) => b.addEventListener('click', () => {
-      b.parentElement.classList.toggle('open'); sfxSafe('click');
-    }));
-    tree.querySelectorAll('.ix-art').forEach((b) => b.addEventListener('click', () => {
-      const row = b.parentElement; const open = !row.classList.contains('open');
-      row.classList.toggle('open', open);
-      const d = row.querySelector('.ix-detail'); if (d) d.hidden = !open;
-      sfxSafe('click');
-    }));
-    tree.querySelectorAll('.ix-speak').forEach((b) => b.addEventListener('click', (e) => {
-      e.stopPropagation(); if (typeof speakArticle === 'function') speakArticle(+b.dataset.n); sfxSafe('click');
-    }));
     $('estudioProg').textContent = '11 títulos · 169 art.';
+    const sub = estSub(); if (sub) sub.textContent = 'El Consejo Constituyente: elige a un guardián para estudiar los artículos de su título.';
+    tree.innerHTML = '<div class="est-galeria">' + TITULOS.map((t) => {
+      const arts = artsOfTitulo(t.id);
+      const g = (typeof PERSONAJES !== 'undefined') ? PERSONAJES.of(t.id) : null;
+      const emblem = MAP.titulos[t.id].emblem || '📜';
+      return `<button class="est-pj" type="button" data-tid="${t.id}" style="--tc:${t.color}">
+        ${g ? PERSONAJES.frame(t.id, 'est-pj-frame') : `<span class="est-pj-emblem">${emblem}</span>`}
+        <b class="est-pj-name">${g ? g.name : t.name}</b>
+        <span class="est-pj-tit">${t.roman ? 'Título ' + t.roman + ' · ' : ''}${t.name}</span>
+        <span class="est-pj-count">${arts.length} artículos</span>
+      </button>`;
+    }).join('') + '</div>';
+    tree.querySelectorAll('.est-pj').forEach((b) => b.addEventListener('click', () => {
+      sfxSafe('click'); renderEstTitulo(b.dataset.tid);
+    }));
   }
+
+  function renderEstTitulo(tid) {
+    estVista = tid;
+    const tree = $('estudioTree'); if (!tree) return;
+    const t = TITULOS.find((x) => x.id === tid);
+    const g = (typeof PERSONAJES !== 'undefined') ? PERSONAJES.of(tid) : null;
+    const arts = artsOfTitulo(tid);
+    const multi = t.islands.length > 1;
+    $('estudioProg').textContent = `${arts.length} art.`;
+    const sub = estSub(); if (sub) sub.textContent = 'Pulsa una tarjeta para leer el artículo con calma y escucharlo en voz alta.';
+    tree.innerHTML = `
+      <button class="est-volver" type="button">⬅️ Consejo Constituyente</button>
+      <div class="est-tit-head" style="--tc:${t.color}">
+        <h2>${t.roman ? 'Título ' + t.roman + ' · ' : ''}${t.name}</h2>
+        ${g ? `<p class="est-tagline">${g.name} — «${g.tagline}»</p>` : ''}
+      </div>
+      ${t.islands.map((is) => {
+        const list = (MAP.islands[is.id] && MAP.islands[is.id].arts) || [];
+        if (!list.length) return '';
+        return `${multi ? `<div class="est-cap" style="--tc:${t.color}">${is.name}</div>` : ''}
+        <div class="est-arts">${list.map((n) => `
+          <button class="est-carta" type="button" data-n="${n}" style="--tc:${colorOf(n)}">
+            <span class="est-carta-emoji">${emojiOf(n)}</span>
+            <span class="est-carta-n">Art. ${n}</span>
+            <span class="est-carta-t">${ARTICLES[n].t}</span>
+          </button>`).join('')}</div>`;
+      }).join('')}
+      <div class="est-guardian" style="--tc:${t.color}">
+        <img class="est-actor" alt="" aria-hidden="true" hidden>
+        <div class="est-guardian-frame" hidden>${g ? PERSONAJES.frame(tid) : ''}</div>
+      </div>`;
+    // El guardián asoma por la esquina inferior: recortado si su retrato
+    // tiene fondo transparente; enmarcado en miniatura si no.
+    if (g && typeof PERSONAJES.recortable === 'function') {
+      const actor = tree.querySelector('.est-actor');
+      const fr = tree.querySelector('.est-guardian-frame');
+      PERSONAJES.recortable(tid, (ok) => {
+        if (estVista !== tid) return;
+        if (ok) { actor.src = g.img; actor.hidden = false; } else { fr.hidden = false; }
+      });
+    }
+    tree.querySelector('.est-volver').addEventListener('click', () => { sfxSafe('click'); renderEstGaleria(); });
+    tree.querySelectorAll('.est-carta').forEach((b) => b.addEventListener('click', () => {
+      sfxSafe('click'); openEstArticulo(+b.dataset.n);
+    }));
+    document.getElementById('estudio').scrollTop = 0;
+  }
+
+  /* Maqueta el texto del artículo para lectura: cada punto numerado con su
+     insignia y aire entre párrafos; las letras a), b)… sangradas. */
+  function formatoLectura(txt) {
+    const lineas = String(txt).split(/\n+/).map((s) => s.trim()).filter(Boolean);
+    return lineas.map((l) => {
+      let m = l.match(/^(\d{1,2})\.\s*([\s\S]*)$/);
+      if (m) return `<p class="est-punto"><span class="est-punto-num">${m[1]}</span><span>${m[2]}</span></p>`;
+      m = l.match(/^([a-z])\)\s*([\s\S]*)$/);
+      if (m) return `<p class="est-letra"><span class="est-letra-id">${m[1]})</span><span>${m[2]}</span></p>`;
+      return `<p class="est-parr">${l}</p>`;
+    }).join('');
+  }
+
+  function openEstArticulo(n) {
+    const a = ARTICLES[n]; if (!a) return;
+    const modal = $('estArtModal'); if (!modal) return;
+    modal.querySelector('.est-art-card').style.setProperty('--tc', colorOf(n));
+    $('estArtEmoji').textContent = emojiOf(n);
+    $('estArtNum').textContent = `Artículo ${n}`;
+    $('estArtTitle').textContent = a.t;
+    $('estArtWhere').textContent = tituloOfN(n);
+    $('estArtBody').innerHTML = formatoLectura(a.e);
+    $('estArtSpeak').onclick = () => { if (typeof speakArticle === 'function') speakArticle(n); sfxSafe('click'); };
+    modal.hidden = false;
+    modal.querySelector('.est-art-card').scrollTop = 0;
+  }
+
   function startEstudio() { hideMenu(); buildEstudio(); $('estudio').hidden = false; }
 
   /* ── cableado ── */
@@ -233,7 +290,11 @@
   const btnEstudio = $('menuEstudio');
   if (btnEstudio) btnEstudio.addEventListener('click', () => { sfxSafe('click'); hideAllScreens(); startEstudio(); });
   const estBack = $('estudioBack');
-  if (estBack) estBack.addEventListener('click', () => { $('estudio').hidden = true; if (typeof stopVoice === 'function') stopVoice(); showMenu(); sfxSafe('click'); });
+  if (estBack) estBack.addEventListener('click', () => {
+    if (typeof stopVoice === 'function') stopVoice(); sfxSafe('click');
+    if (estVista !== 'galeria') { renderEstGaleria(); return; } // dentro de un título: vuelve a la galería
+    $('estudio').hidden = true; showMenu();
+  });
   const mqClose = $('memQuiz').querySelector('.card-close');
   if (mqClose) mqClose.addEventListener('click', () => { $('memQuiz').hidden = true; });
 
