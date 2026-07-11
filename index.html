@@ -45,6 +45,12 @@
         <span class="gc-desc">Preguntas tipo test sobre la Constitución. ¿Cuántas aciertas seguidas?</span>
         <span class="gc-go">Jugar ▸</span>
       </button>
+      <button class="game-card game-card-wide" data-game="islas">
+        <span class="gc-emoji">🏝️</span>
+        <span class="gc-name">Islas</span>
+        <span class="gc-desc">Aventura isla a isla en orden: entra en cada título y conquista sus territorios uno a uno hasta llegar a La Unidad de España.</span>
+        <span class="gc-go">Jugar ▸</span>
+      </button>
     </div>
     <div class="menu-bottom">
       <button id="menuEstudio" class="menu-big-btn">
@@ -109,6 +115,18 @@
     <div id="mqOptions" class="mq-options"></div>
   </div>
 </div>
+
+<!-- Juego 5: Islas -->
+<div id="islas" class="game-screen" hidden>
+  <header class="mem-top">
+    <button id="islasBack" class="mem-back" title="Volver">⬅️ Menú</button>
+    <div class="mem-heading">🏝️ Islas</div>
+    <div class="mem-prog"><span id="islasProg"></span></div>
+  </header>
+  <div class="mem-diffbar" id="islasDiffBar"></div>
+  <div id="islasStage" class="islas-stage"></div>
+</div>
+<div id="islasQuiz" class="overlay" hidden></div>
 
 <!-- Juego 3: Tribunal -->
 <div id="tribunal" class="game-screen" hidden>
@@ -363,6 +381,7 @@
 <script src="js/tribunal.js"></script>
 <script src="js/trivial.js"></script>
 <script src="js/estadisticas.js"></script>
+<script src="js/islas.js"></script>
 <script src="js/juegos.js"></script>
 </body>
 </html>

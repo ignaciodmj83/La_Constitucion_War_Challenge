@@ -275,13 +275,14 @@
   function startEstudio() { hideMenu(); buildEstudio(); $('estudio').hidden = false; }
 
   /* ── cableado ── */
-  function hideAllScreens() { ['memoria', 'tribunal', 'trivial', 'estudio'].forEach((id) => { const el = $(id); if (el) el.hidden = true; }); }
+  function hideAllScreens() { ['memoria', 'tribunal', 'trivial', 'estudio', 'islas'].forEach((id) => { const el = $(id); if (el) el.hidden = true; }); }
   menu.querySelectorAll('.game-card[data-game]').forEach((b) => b.addEventListener('click', () => {
     const g = b.dataset.game; sfxSafe('click'); hideAllScreens();
     if (g === 'risk') startRisk();
     else if (g === 'memoria') startMemoria();
     else if (g === 'tribunal' && typeof startTribunal === 'function') startTribunal();
     else if (g === 'trivial' && typeof startTrivial === 'function') startTrivial();
+    else if (g === 'islas' && typeof startIslas === 'function') startIslas();
   }));
   // botón "Menú de juegos" desde la partida de Conquista
   const btnMenu = $('btnMenu');
