@@ -192,7 +192,7 @@
         return (multi ? `<div class="ix-cap">${is.name}</div>` : '') + rows;
       }).join('');
       const guard = (typeof PERSONAJES !== 'undefined') ? PERSONAJES.of(t.id) : null;
-      const icon = guard ? PERSONAJES.avatar(t.id, 34) : `<span class="ix-emblem" style="background:${t.color}">${emblem}</span>`;
+      const icon = guard ? PERSONAJES.frame(t.id, 'ix-guard-frame') : `<span class="ix-emblem" style="background:${t.color}">${emblem}</span>`;
       return `<div class="ix-titulo" data-tid="${t.id}">
         <button class="ix-sum" type="button">
           <span class="ix-arrow">▸</span>

@@ -15,21 +15,22 @@
   const ASSET = (id) => `assets/personajes/${id}.png`;
 
   // Metadatos por título (id de hierarchy.js). El "name/tagline" acompaña al arte.
+  // "voz" es el timbre con el que habla el personaje: 'mujer' | 'joven' | 'viejo'.
   const PERSONAJES = {
-    preliminar: { name: 'El Sabio Fundador', tagline: 'Guardián de las Tablas: Democracia, Derechos y Libertad.', emblem: '📜' },
-    t1: { name: 'El Custodio de los Derechos', tagline: 'Con la paloma y la balanza, protejo los derechos fundamentales.', emblem: '🕊️' },
-    t2: { name: 'El Rey', tagline: 'Corona y cetro: símbolo de la unidad y permanencia del Estado.', emblem: '👑' },
-    t3: { name: 'La Voz de las Cortes', tagline: 'Custodio el Libro de las Leyes que aprueban Congreso y Senado.', emblem: '🏛️' },
-    t4: { name: 'El Ministro del Reino', tagline: 'Pluma y decreto: aquí se gobierna y se administra.', emblem: '⚙️' },
-    t5: { name: 'El Enlace Parlamentario', tagline: 'Control parlamentario y cooperación entre Gobierno y Cortes.', emblem: '🤝' },
-    t6: { name: 'El Juez del Búho', tagline: 'Balanza y sabiduría: la justicia emana del pueblo.', emblem: '⚖️' },
-    t7: { name: 'El Tesorero del Reino', tagline: 'Presupuestos y tributos: yo custodio el oro del Estado.', emblem: '🪙' },
-    t8: { name: 'La Cartógrafa de España', tagline: 'Municipios, provincias y autonomías: yo dibujé este mapa.', emblem: '🗺️' },
-    t9: { name: 'Los Guardianes del Tribunal', tagline: 'Con lupa y llama vigilamos que ninguna ley traicione la Constitución.', emblem: '🛡️' },
-    t10: { name: 'La Arquitecta de la Reforma', tagline: 'Plano en mano, diseño cómo se cambia la Constitución.', emblem: '📐' },
+    preliminar: { name: 'El Sabio Fundador', tagline: 'Guardián de las Tablas: Democracia, Derechos y Libertad.', emblem: '📜', voz: 'viejo' },
+    t1: { name: 'El Custodio de los Derechos', tagline: 'Con la paloma y la balanza, protejo los derechos fundamentales.', emblem: '🕊️', voz: 'joven' },
+    t2: { name: 'El Rey', tagline: 'Corona y cetro: símbolo de la unidad y permanencia del Estado.', emblem: '👑', voz: 'viejo' },
+    t3: { name: 'La Voz de las Cortes', tagline: 'Custodio el Libro de las Leyes que aprueban Congreso y Senado.', emblem: '🏛️', voz: 'mujer' },
+    t4: { name: 'El Ministro del Reino', tagline: 'Pluma y decreto: aquí se gobierna y se administra.', emblem: '⚙️', voz: 'joven' },
+    t5: { name: 'El Enlace Parlamentario', tagline: 'Control parlamentario y cooperación entre Gobierno y Cortes.', emblem: '🤝', voz: 'joven' },
+    t6: { name: 'El Juez del Búho', tagline: 'Balanza y sabiduría: la justicia emana del pueblo.', emblem: '⚖️', voz: 'viejo' },
+    t7: { name: 'El Tesorero del Reino', tagline: 'Presupuestos y tributos: yo custodio el oro del Estado.', emblem: '🪙', voz: 'joven' },
+    t8: { name: 'La Cartógrafa de España', tagline: 'Municipios, provincias y autonomías: yo dibujé este mapa.', emblem: '🗺️', voz: 'mujer' },
+    t9: { name: 'Los Guardianes del Tribunal', tagline: 'Con lupa y llama vigilamos que ninguna ley traicione la Constitución.', emblem: '🛡️', voz: 'viejo' },
+    t10: { name: 'La Arquitecta de la Reforma', tagline: 'Plano en mano, diseño cómo se cambia la Constitución.', emblem: '📐', voz: 'mujer' },
   };
   // Figura final / heroína transversal (victorias, portada, centro del Trivial).
-  const UNIDAD = { id: 'unidad', name: 'La Unidad de España', tagline: 'Corona, escudo y espada: la Nación indisoluble que a todos une.', emblem: '🛡️', img: ASSET('unidad') };
+  const UNIDAD = { id: 'unidad', name: 'La Unidad de España', tagline: 'Corona, escudo y espada: la Nación indisoluble que a todos une.', emblem: '🛡️', voz: 'mujer', img: ASSET('unidad') };
 
   function pjOf(tid) {
     const p = PERSONAJES[tid]; if (!p) return null;
@@ -51,6 +52,15 @@
       </div>
       <figcaption class="pj-cap"><b class="pj-name">${p.name}</b>${p.roman ? `<span class="pj-role">Título ${p.roman}</span>` : ''}</figcaption>
     </figure>`;
+  }
+
+  /* ── Marco solo (retrato sin pie de foto; para cabeceras como la Preparación) ── */
+  function frame(tid, cls = '') {
+    const p = tid === 'unidad' ? Object.assign({ color: '#c9a13b' }, UNIDAD) : pjOf(tid);
+    if (!p) return '';
+    return `<div class="pj-frame ${cls}" style="--tc:${p.color}">
+      <img class="pj-art" src="${p.img}" alt="${p.name}" onerror="this.classList.add('pj-art-missing')">
+      <span class="pj-fallback" aria-hidden="true">${p.emblem}</span></div>`;
   }
 
   /* ── Avatar compacto (círculo temático con arte o emblema) ── */
@@ -107,5 +117,5 @@
   window.pjOnSpeakEnd = function () { hideSpeaking(); };
 
   // API pública para los juegos.
-  window.PERSONAJES = { of: pjOf, list, portrait, avatar, unidad: () => UNIDAD, showSpeaking, hideSpeaking };
+  window.PERSONAJES = { of: pjOf, list, portrait, frame, avatar, unidad: () => UNIDAD, showSpeaking, hideSpeaking };
 })();
