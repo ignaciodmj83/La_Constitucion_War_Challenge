@@ -104,76 +104,144 @@
     entrar(uid);
   }
 
-  /* ── UI: Mi cuenta ── */
+  /* ── contraseña ── */
+  function setPass(pass) { const u = user(); u.pin = pass ? hash(pass) : null; saveDB(); pintaMenu(); }
+  const checkPass = (u, pass) => hash(pass || '') === u.pin;
+  const esc = (s) => String(s).replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const toastSafe = (m) => { try { if (typeof toast === 'function') toast(m); } catch { /* */ } };
+
+  /* ── UI: Mi cuenta (centro de la cuenta) ── */
   function pintaMenu() {
     const el = $('menuCuentaName'); if (el && user()) el.textContent = user().name;
   }
+  let vista = 'inicio'; // 'inicio' | 'pass'
+  function openCuenta() { vista = 'inicio'; renderCuenta(); $('cuentaModal').hidden = false; }
+
   function renderCuenta() {
     const u = user(); const body = $('cuentaBody'); if (!u || !body) return;
+    if (vista === 'pass') return renderPass();
     const lista = partidasDe(u.id).map((p) => `
       <div class="cta-partida ${p.id === u.activa ? 'activa' : ''}">
-        <div class="cta-p-info"><b>${p.name}</b><small>${p.id === u.activa ? '▶ en curso · ' : ''}${resumen(p.id === u.activa ? snapshot() : p.data)}</small></div>
+        <div class="cta-p-info"><b>${esc(p.name)}</b><small>${p.id === u.activa ? '▶ en curso · ' : ''}${resumen(p.id === u.activa ? snapshot() : p.data)}</small></div>
         <div class="cta-p-btns">
           ${p.id === u.activa ? '' : `<button class="cta-btn" data-abrir="${p.id}">📂 Abrir</button>`}
-          <button class="cta-btn peligro" data-borrar="${p.id}">🗑️</button>
+          <button class="cta-btn peligro" data-borrar="${p.id}" title="Eliminar partida">🗑️</button>
         </div>
       </div>`).join('');
     body.innerHTML = `
-      <div class="cta-user"><span class="cta-avatar">${u.name[0].toUpperCase()}</span>
-        <div class="cta-u-txt"><b>${u.name}</b><small>${u.pin ? '🔒 protegido con PIN' : 'sin PIN'}</small></div>
-        <button id="ctaCambiar" class="cta-btn">🔁 Cambiar</button></div>
+      <div class="cta-user">
+        <span class="cta-avatar">${esc(u.name[0].toUpperCase())}</span>
+        <div class="cta-u-txt"><b id="ctaName">${esc(u.name)}</b><small>${u.pin ? '🔒 con contraseña' : 'sin contraseña'}</small></div>
+        <button id="ctaEditName" class="cta-btn" title="Editar nombre">✏️</button>
+      </div>
+      <div class="cta-row">
+        <button id="ctaPass" class="cta-btn cta-mitad">🔑 ${u.pin ? 'Cambiar' : 'Poner'} contraseña</button>
+        <button id="ctaPrefs" class="cta-btn cta-mitad">⚙️ Preferencias</button>
+      </div>
       <h3 class="cta-h">🎮 Mis partidas</h3>
       <div class="cta-partidas">${lista}</div>
       <button id="ctaNueva" class="secondary-btn cta-full">➕ Nueva partida</button>
-      <h3 class="cta-h">Juego</h3>
-      <div class="cta-row">
-        <button id="ctaAjustes" class="cta-btn cta-mitad">⚙️ Ajustes</button>
-        <button id="ctaAyuda" class="cta-btn cta-mitad">❓ Cómo se juega</button>
+      <div class="cta-foot">
+        <button id="ctaSalir" class="cta-btn cta-salir">🚪 Salir / cambiar de usuario</button>
+        <button id="ctaAyuda" class="cta-link">❓ Cómo se juega</button>
       </div>`;
     body.querySelectorAll('[data-abrir]').forEach((b) => b.addEventListener('click', () => abrirPartida(b.dataset.abrir)));
     body.querySelectorAll('[data-borrar]').forEach((b) => b.addEventListener('click', () => eliminarPartida(b.dataset.borrar)));
     $('ctaNueva').addEventListener('click', nuevaPartida);
-    $('ctaCambiar').addEventListener('click', () => { $('cuentaModal').hidden = true; renderLogin(); $('loginModal').hidden = false; });
-    $('ctaAjustes').addEventListener('click', () => { if (typeof renderSettings === 'function') { renderSettings(); $('settingsModal').hidden = false; } });
+    $('ctaEditName').addEventListener('click', editarNombre);
+    $('ctaPass').addEventListener('click', () => { vista = 'pass'; renderPass(); });
+    $('ctaPrefs').addEventListener('click', () => { if (typeof renderSettings === 'function') { renderSettings(); $('settingsModal').hidden = false; } });
+    $('ctaSalir').addEventListener('click', () => { $('cuentaModal').hidden = true; renderLogin(); $('loginModal').hidden = false; });
     $('ctaAyuda').addEventListener('click', () => { $('introModal').hidden = false; });
   }
 
-  /* ── UI: ¿Quién juega? ── */
+  function editarNombre() {
+    const u = user(); const el = $('ctaName'); if (!el) return;
+    el.innerHTML = `<input id="ctaNameInput" class="cta-inline-input" maxlength="16" value="${esc(u.name)}">`;
+    const inp = $('ctaNameInput'); inp.focus(); inp.select();
+    let done = false;
+    const save = () => { if (done) return; done = true; const v = inp.value.trim(); if (v) { u.name = v; saveDB(); pintaMenu(); } renderCuenta(); };
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); else if (e.key === 'Escape') { done = true; renderCuenta(); } });
+    inp.addEventListener('blur', save);
+  }
+
+  function renderPass() {
+    const u = user(); const body = $('cuentaBody'); if (!body) return;
+    body.innerHTML = `
+      <button class="cta-volver" id="ctaPassBack">⬅️ Mi cuenta</button>
+      <h3 class="cta-h">🔑 ${u.pin ? 'Cambiar' : 'Poner'} contraseña</h3>
+      <div class="cta-form">
+        ${u.pin ? `<label>Contraseña actual<input id="passAct" type="password" autocomplete="current-password"></label>` : ''}
+        <label>${u.pin ? 'Nueva contraseña' : 'Contraseña'}<input id="passNew" type="password" autocomplete="new-password" placeholder="mínimo 3 caracteres"></label>
+        <label>Repetir contraseña<input id="passRep" type="password" autocomplete="new-password"></label>
+        <div id="passErr" class="cta-err" hidden></div>
+        <div class="cta-row">
+          ${u.pin ? `<button id="passQuitar" class="cta-btn cta-mitad peligro">Quitar contraseña</button>` : ''}
+          <button id="passGuardar" class="primary-btn cta-mitad">Guardar</button>
+        </div>
+      </div>`;
+    const err = (m) => { const e = $('passErr'); e.textContent = m; e.hidden = false; };
+    const volver = () => { vista = 'inicio'; renderCuenta(); };
+    $('ctaPassBack').addEventListener('click', volver);
+    $('passGuardar').addEventListener('click', () => {
+      if (u.pin && !checkPass(u, $('passAct').value)) return err('La contraseña actual no es correcta.');
+      const nw = $('passNew').value, rp = $('passRep').value;
+      if (nw.length < 3) return err('La contraseña debe tener al menos 3 caracteres.');
+      if (nw !== rp) return err('Las dos contraseñas no coinciden.');
+      setPass(nw); volver(); toastSafe('🔑 Contraseña actualizada');
+    });
+    if ($('passQuitar')) $('passQuitar').addEventListener('click', () => {
+      if (!checkPass(u, $('passAct').value)) return err('Escribe tu contraseña actual para quitarla.');
+      setPass(null); volver(); toastSafe('🔓 Contraseña quitada');
+    });
+  }
+
+  /* ── UI: Salir / ¿Quién juega? (selector limpio, solo al cambiar de usuario) ── */
   function renderLogin() {
     const body = $('loginBody'); if (!body) return;
     const usuarios = Object.values(DB.usuarios).sort((a, b) => a.created - b.created);
     body.innerHTML = `
+      <p class="login-sub">Elige tu usuario para continuar tu progreso, o crea uno nuevo.</p>
       <div class="login-users">${usuarios.map((x) => `
         <button class="login-user ${x.id === DB.sesion ? 'sel' : ''}" data-uid="${x.id}">
-          <span class="cta-avatar">${x.name[0].toUpperCase()}</span><b>${x.name}</b>${x.pin ? '<span class="login-lock">🔒</span>' : ''}
+          <span class="cta-avatar">${esc(x.name[0].toUpperCase())}</span>
+          <span class="login-u-name">${esc(x.name)}${x.id === DB.sesion ? ' <small>(actual)</small>' : ''}</span>
+          <span class="login-u-end">${x.pin ? '🔒' : '▸'}</span>
         </button>`).join('')}</div>
-      <div id="loginPin" class="login-pin" hidden>
-        <input id="loginPinInput" type="password" inputmode="numeric" maxlength="4" placeholder="PIN (4 dígitos)">
-        <button id="loginPinOk" class="primary-btn">Entrar</button>
+      <div id="loginPinWrap" class="login-pinwrap" hidden>
+        <label id="loginPinFor" class="login-pin-for"></label>
+        <div class="login-pin-row">
+          <input id="loginPinInput" type="password" autocomplete="current-password" placeholder="Contraseña">
+          <button id="loginPinOk" class="primary-btn">Entrar</button>
+        </div>
+        <div id="loginPinErr" class="cta-err" hidden></div>
       </div>
-      <h3 class="cta-h">➕ Nuevo usuario</h3>
-      <div class="login-nuevo">
-        <input id="loginNombre" type="text" maxlength="16" placeholder="Nombre">
-        <input id="loginNuevoPin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN (opcional)">
-        <button id="loginCrear" class="primary-btn">Crear</button>
+      <button id="loginNuevoBtn" class="cta-link cta-full">➕ Crear usuario nuevo</button>
+      <div id="loginNuevo" class="cta-form" hidden>
+        <label>Nombre<input id="loginNombre" type="text" maxlength="16" placeholder="Tu nombre"></label>
+        <label>Contraseña (opcional)<input id="loginNuevoPin" type="password" placeholder="déjalo vacío si no quieres"></label>
+        <button id="loginCrear" class="primary-btn cta-full">Crear y entrar</button>
       </div>`;
     let pendiente = null;
     body.querySelectorAll('.login-user').forEach((b) => b.addEventListener('click', () => {
       const x = DB.usuarios[b.dataset.uid];
       if (!x.pin) { entrar(x.id); return; }
       pendiente = x.id;
-      $('loginPin').hidden = false; $('loginPinInput').value = ''; $('loginPinInput').focus();
+      $('loginPinFor').textContent = `🔒 Contraseña de ${x.name}`;
+      $('loginPinWrap').hidden = false; $('loginPinErr').hidden = true;
+      const inp = $('loginPinInput'); inp.value = ''; inp.focus();
     }));
-    $('loginPinOk').addEventListener('click', () => {
+    const tryLogin = () => {
       const x = DB.usuarios[pendiente]; if (!x) return;
       if (hash($('loginPinInput').value) === x.pin) entrar(x.id);
-      else { $('loginPinInput').value = ''; $('loginPinInput').placeholder = '❌ PIN incorrecto'; }
-    });
+      else { $('loginPinInput').value = ''; const e = $('loginPinErr'); e.textContent = '❌ Contraseña incorrecta'; e.hidden = false; $('loginPinInput').focus(); }
+    };
+    $('loginPinOk').addEventListener('click', tryLogin);
+    $('loginPinInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(); });
+    $('loginNuevoBtn').addEventListener('click', () => { const n = $('loginNuevo'); n.hidden = !n.hidden; if (!n.hidden) $('loginNombre').focus(); });
     $('loginCrear').addEventListener('click', () => {
       const nombre = $('loginNombre').value.trim(); if (!nombre) { $('loginNombre').focus(); return; }
-      const pin = $('loginNuevoPin').value.trim();
-      if (pin && !/^\d{4}$/.test(pin)) { $('loginNuevoPin').value = ''; $('loginNuevoPin').placeholder = '4 dígitos'; return; }
-      crearUsuario(nombre, pin || null);
+      crearUsuario(nombre, $('loginNuevoPin').value.trim() || null);
     });
   }
 
@@ -185,7 +253,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     pintaMenu();
     const btn = $('menuCuenta');
-    if (btn) btn.addEventListener('click', () => { renderCuenta(); $('cuentaModal').hidden = false; });
+    if (btn) btn.addEventListener('click', openCuenta);
     // Cierre delegado de modales: funciona aunque la Conquista aún no haya arrancado.
     document.addEventListener('click', (e) => {
       const b = e.target.closest('.card-close');
