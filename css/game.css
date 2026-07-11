@@ -186,7 +186,7 @@ body {
 .prep-body { text-align: center; padding: 4px 0 8px; }
 .art-num { display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: 1px; color: var(--tc); background: color-mix(in srgb, var(--tc) 18%, transparent); padding: 4px 12px; border-radius: 999px; }
 .art-title { font-size: 20px; margin: 10px 0 4px; }
-.art-exp { font-size: 14.5px; line-height: 1.6; color: #d4dbec; text-align: left; margin-bottom: 14px; }
+.art-exp { font-size: 14.5px; line-height: 1.6; color: #d4dbec; text-align: left; margin-bottom: 14px; white-space: pre-line; }
 .art-mnemo { font-size: 14px; line-height: 1.55; text-align: left; background: color-mix(in srgb, var(--tc) 12%, var(--panel2)); border: 1px solid var(--tc); border-radius: 12px; padding: 12px 14px; color: #fff; }
 .mnemo-tag { display: block; font-size: 11px; font-weight: 800; letter-spacing: .5px; color: var(--tc); margin-bottom: 4px; text-transform: uppercase; }
 .prep-nav { display: flex; gap: 10px; margin-top: 16px; }
@@ -224,7 +224,7 @@ body {
 .fb-banner.ko { background: rgba(224,82,82,.13); color: #ff9d9d; border: 1px solid rgba(224,82,82,.4); }
 .fb-banner .pts { font-variant-numeric: tabular-nums; }
 .fb-ref { font-size: 12px; font-weight: 800; color: var(--gold); margin-bottom: 5px; }
-.fb-exp { font-size: 13.5px; color: var(--muted); line-height: 1.55; margin-bottom: 8px; }
+.fb-exp { font-size: 13.5px; color: var(--muted); line-height: 1.55; margin-bottom: 8px; white-space: pre-line; }
 .fb-mnemo { font-size: 13px; line-height: 1.5; background: rgba(227,169,63,.1); border: 1px solid rgba(227,169,63,.35); border-radius: 10px; padding: 9px 12px; color: #f0d9a8; }
 
 /* ── Fin / victoria ── */
@@ -305,7 +305,7 @@ body {
 .ix-art-row.open .ix-caret { transform: rotate(90deg); }
 .ix-art-row.open > .ix-art { background: rgba(255,255,255,.06); }
 .ix-detail { padding: 8px 10px 12px 46px; }
-.ix-detail-txt { margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: var(--text); }
+.ix-detail-txt { margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: var(--text); white-space: pre-line; }
 .ix-speak { border: 1px solid var(--line); background: var(--panel2); color: var(--gold); border-radius: 9px;
   padding: 6px 12px; font: inherit; font-weight: 700; font-size: 12.5px; cursor: pointer; }
 .ix-speak:hover { border-color: var(--gold); }
@@ -485,7 +485,7 @@ body {
 .tc-feedback.bad { background: rgba(224,82,82,.12); border-color: #7a3030; }
 .fb-verdict { font-weight: 800; margin-bottom: 6px; }
 .fb-verdict .fb-ref { font-size: 12px; color: var(--muted); font-weight: 600; margin-left: 6px; }
-.fb-why { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.fb-why { font-size: 13px; color: var(--muted); line-height: 1.5; white-space: pre-line; }
 .fb-correct { font-size: 13px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); line-height: 1.5; }
 .tc-feedback .primary-btn { margin-top: 14px; }
 .trib-summary { text-align: center; }
