@@ -119,8 +119,12 @@ body {
 
 /* ═══════ Overlays / tarjetas ═══════ */
 .overlay[hidden] { display: none; }
-.overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
-  background: rgba(6,9,15,.74); backdrop-filter: blur(6px); animation: fadeIn .2s ease; padding: 18px; }
+/* align-items:flex-start + margin:auto en la tarjeta: se centra cuando cabe y
+   permite hacer scroll desde arriba cuando es más alta que la pantalla
+   (evita el bug de flexbox que corta la parte superior con align-items:center). */
+.overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center;
+  overflow-y: auto; background: rgba(6,9,15,.74); backdrop-filter: blur(6px); animation: fadeIn .2s ease; padding: 18px; }
+.overlay > .card { margin: auto; }
 /* modales que pueden abrirse ENCIMA del menú principal (z 70) */
 #cuentaModal, #loginModal, #settingsModal, #introModal, #estArtModal { z-index: 80; }
 @keyframes fadeIn { from { opacity: 0; } }
@@ -311,9 +315,10 @@ body {
 .q-feedback .speak-btn { margin: 2px 0 8px; }
 
 /* ── Menú de juegos ── */
-.menu-overlay { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 20px;
+.menu-overlay { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-start; justify-content: center; padding: 20px;
   background: radial-gradient(circle at 50% 28%, #16324a, #0a1a28 72%); overflow-y: auto; }
 .menu-overlay[hidden] { display: none; }
+.menu-card { margin: auto; }
 .menu-card { width: min(760px, 100%); }
 .menu-brand { text-align: center; margin-bottom: 22px; }
 .menu-brand .brand-flag { margin: 0 auto; }
@@ -583,10 +588,10 @@ body {
   #legendPanel { width: 200px; }
 }
 @media (max-width: 560px) {
-  .overlay { padding: 8px; align-items: flex-start; }
-  .card { padding: 16px 14px; max-height: 94vh; }
+  .overlay { padding: 10px; }
+  .card { padding: 16px 14px; }
   .card h2 { font-size: 17px; }
-  .list-card, .settings-card { width: 100%; }
+  .list-card, .settings-card, .cuenta-card, .login-card { width: 100%; }
   .index-sub { font-size: 12px; }
   .est-galeria { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px; }
   .est-pj .pj-frame { width: 92px; }
