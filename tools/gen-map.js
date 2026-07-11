@@ -104,7 +104,7 @@ function makeValueNoise(seed, gx, gy) {
 const GX = Math.round(W / 105), GY = Math.round(H / 105);
 const noiseX = makeValueNoise(717, GX, GY);
 const noiseY = makeValueNoise(919, GX, GY);
-const WARP = 19;
+const WARP = 26;
 const warpX = (x, y) => x + noiseX(x, y) * WARP;
 const warpY = (x, y) => y + noiseY(x, y) * WARP;
 
@@ -132,8 +132,10 @@ const PROFILE_FAR = [
   [0.36, 0.92, 0.07], [0.46, 1.00, 0.00], [0.58, 0.86, 0.09], [0.70, 0.72, 0.00],
   [0.80, 0.80, -0.07], [0.90, 0.46, 0.00], [0.97, 0.18, 0.03], [1.00, 0.05, 0.00],
 ];
-const HOME_CFG = { id: 'home', base: [500, 30], axis: [0, 1840], thick: 300, profile: PROFILE_HOME, seed: 20260707, jitter: 6, coastAmp: 0.32, swayAmp: 0.13 };
-const FAR_CFG = { id: 'far', base: [1250, 985], axis: [1010, 0], thick: 600, profile: PROFILE_FAR, seed: 20260808, jitter: 7, coastAmp: 0.34, swayAmp: 0.15 };
+/* Ejes en diagonal y mayor grosor/rugosidad: contornos de continente
+   naturales (nada de "salchichas" horizontales o verticales aplastadas). */
+const HOME_CFG = { id: 'home', base: [560, 40], axis: [-160, 1790], thick: 350, profile: PROFILE_HOME, seed: 20260707, jitter: 6, coastAmp: 0.42, swayAmp: 0.18 };
+const FAR_CFG = { id: 'far', base: [1230, 700], axis: [960, 420], thick: 640, profile: PROFILE_FAR, seed: 20260808, jitter: 7, coastAmp: 0.40, swayAmp: 0.19 };
 
 /* ruido 1D suave (para costas orgánicas). */
 function make1DNoise(seed, cells) {
@@ -332,7 +334,7 @@ for (const t of MAINLAND_TITULOS) subdivideMainland(t);
 fixFragments(chapLabel, (idx) => chapLabel[idx] >= 0);
 
 /* ═══════════════ 3b. islas: capítulos satélite (color del reino) + Títulos IX/X ═══════════════ */
-const COAST_GAP_CELLS = 13;
+const COAST_GAP_CELLS = 11;
 function dilate(src, times) {
   let cur = src;
   for (let r = 0; r < times; r++) {
@@ -369,7 +371,7 @@ function fits(ccx, ccy, r) {
 function placeBlob(anchor, r, seed) {
   if (fits(anchor[0], anchor[1], r)) return [anchor[0], anchor[1]];
   const rnd = mulberry(seed);
-  for (let dist = STEP * 3; dist < 1600; dist += STEP * 3) {
+  for (let dist = STEP * 3; dist < 2400; dist += STEP * 3) {
     const a0 = rnd() * Math.PI * 2;
     for (let a = 0; a < 30; a++) {
       const ang = a0 + a * (Math.PI * 2 / 30);

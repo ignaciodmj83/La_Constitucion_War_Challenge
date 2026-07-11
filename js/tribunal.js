@@ -233,7 +233,13 @@
   function loadBest() { try { return JSON.parse(localStorage.getItem(TKEY)) || { best: {}, total: CASOS.length }; } catch { return { best: {}, total: CASOS.length }; } }
   function saveBest(b) { try { localStorage.setItem(TKEY, JSON.stringify(b)); } catch { /* */ } }
 
-  let T = { mode: 'abogado', order: [], i: 0, wins: 0, answered: false };
+  const TDIFF = {
+    facil: { name: 'Fácil', emoji: '🌱', desc: '2 opciones y artículos a la vista' },
+    medio: { name: 'Medio', emoji: '⚔️', desc: '3 opciones y artículos a la vista' },
+    dificil: { name: 'Difícil', emoji: '🔥', desc: '3 opciones, sin pista de artículos' },
+  };
+  let T = { mode: 'abogado', diff: loadBest().diff || 'medio', order: [], i: 0, wins: 0, answered: false };
+  if (!TDIFF[T.diff]) T.diff = 'medio';
 
   function renderModeBar() {
     const bar = $('tribModeBar');
@@ -243,6 +249,46 @@
       if (T.mode === b.dataset.tm) return;
       T.mode = b.dataset.tm; sfxSafe('click'); newRun(); renderModeBar(); renderCase();
     }));
+    const dbar = $('tribDiffBar');
+    if (dbar) {
+      dbar.innerHTML = Object.entries(TDIFF).map(([k, d]) =>
+        `<button class="mem-diff ${T.diff === k ? 'sel' : ''}" data-td="${k}"><b>${d.emoji} ${d.name}</b><small>${d.desc}</small></button>`).join('');
+      dbar.querySelectorAll('.mem-diff').forEach((b) => b.addEventListener('click', () => {
+        if (T.diff === b.dataset.td) return;
+        T.diff = b.dataset.td; const s = loadBest(); s.diff = T.diff; saveBest(s);
+        sfxSafe('click'); newRun(); renderModeBar(); renderCase();
+      }));
+    }
+  }
+
+  /* ── Escena de la sala: columnas, estrado y el Juez del Búho presidiendo ── */
+  function salaSVG() {
+    const col = (x) => `<g><rect x="${x}" y="34" width="26" height="128" rx="3" fill="#22344c"/>
+      <rect x="${x - 6}" y="26" width="38" height="10" rx="3" fill="#2e4460"/>
+      <rect x="${x - 6}" y="160" width="38" height="10" rx="3" fill="#2e4460"/></g>`;
+    return `<svg viewBox="0 0 800 210" class="trib-scene" aria-hidden="true" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="tsWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#101d30"/><stop offset="1" stop-color="#182a42"/></linearGradient>
+        <linearGradient id="tsWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b4a2a"/><stop offset="0.12" stop-color="#8a5f36"/><stop offset="1" stop-color="#4a3018"/></linearGradient>
+        <linearGradient id="tsWood2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a5530"/><stop offset="1" stop-color="#3f2a14"/></linearGradient>
+      </defs>
+      <rect width="800" height="210" fill="url(#tsWall)"/>
+      ${col(70)}${col(180)}${col(594)}${col(704)}
+      <text x="400" y="24" text-anchor="middle" class="ts-lema">TRIBUNAL CONSTITUCIONAL</text>
+      <text x="248" y="60" text-anchor="middle" font-size="24">🛡️</text>
+      <text x="552" y="60" text-anchor="middle" font-size="24">🇪🇸</text>
+      <image href="assets/personajes/t6.png" x="322" y="26" width="156" height="144" preserveAspectRatio="xMidYMid meet"/>
+      <rect x="252" y="128" width="296" height="64" rx="8" fill="url(#tsWood)" stroke="#2a1c0c" stroke-width="2"/>
+      <rect x="240" y="120" width="320" height="14" rx="6" fill="#8a5f36" stroke="#2a1c0c" stroke-width="1.5"/>
+      <text x="284" y="166" font-size="22">⚖️</text>
+      <text x="496" y="166" font-size="20">🔨</text>
+      <rect x="60" y="176" width="150" height="34" rx="5" fill="url(#tsWood2)"/>
+      <text x="135" y="172" text-anchor="middle" font-size="24">🧑‍💼</text>
+      <rect x="590" y="176" width="150" height="34" rx="5" fill="url(#tsWood2)"/>
+      <text x="665" y="172" text-anchor="middle" font-size="24">👩‍💼</text>
+      <text x="135" y="200" text-anchor="middle" class="ts-rotulo">DEFENSA</text>
+      <text x="665" y="200" text-anchor="middle" class="ts-rotulo">ACUSACIÓN</text>
+    </svg>`;
   }
   function newRun() { T.order = shuffle(CASOS.map((_, k) => k)); T.i = 0; T.wins = 0; }
 
@@ -261,9 +307,17 @@
     const rol = T.mode === 'abogado'
       ? `<div class="tc-rol">${juezAv}<span>🧑‍💼 ${c.rolAbogado} · alegas ante ${juezName}</span></div>`
       : `<div class="tc-rol">${juezAv}<span>Eres ${juezName}: escuchas a las partes y dictas el fallo.</span></div>`;
+    // dificultad: en fácil solo 2 opciones; en difícil se ocultan los artículos-pista
+    let opciones = block.o;
+    if (T.diff === 'facil') {
+      const ok = block.o.find((x) => x.ok); const malas = block.o.filter((x) => !x.ok);
+      opciones = [ok, malas[Math.floor(Math.random() * malas.length)]];
+    }
+    const artsChips = T.diff === 'dificil' ? '' : `<div class="tc-arts">${c.arts.map((a) => `<span class="tc-art">Art. ${a}</span>`).join('')}</div>`;
     $('tribStage').innerHTML = `
+      ${salaSVG()}
       <div class="trib-case">
-        <div class="tc-arts">${c.arts.map((a) => `<span class="tc-art">Art. ${a}</span>`).join('')}</div>
+        ${artsChips}
         <h2 class="tc-title">${c.titulo}</h2>
         <p class="tc-facts">${c.hechos}</p>
         ${rol}
@@ -272,7 +326,7 @@
         <div class="tc-feedback" id="tcFeedback" hidden></div>
       </div>`;
     const box = $('tcOptions');
-    shuffle(block.o).forEach((op) => {
+    shuffle(opciones).forEach((op) => {
       const b = document.createElement('button'); b.className = 'tc-opt'; b.textContent = op.t;
       b.addEventListener('click', () => answer(op, block, c, box));
       box.appendChild(b);

@@ -938,12 +938,21 @@ function renderSettings() {
 function init() {
   buildMap(); renderHud(); checkDaily();
   $('btnAch').addEventListener('click', () => { closeAll(); showAchievements(); });
-  $('btnStats').addEventListener('click', () => { closeAll(); if (typeof openStats === 'function') openStats('all'); else showStats(); });
-  $('btnSettings').addEventListener('click', () => { closeAll(); renderSettings(); $('settingsModal').hidden = false; });
   $('prepSpeak').addEventListener('click', () => { if (PREP) speakArticle(PREP.arts[PREP.i]); });
   $('fbSpeak').addEventListener('click', () => { if (B) speakArticle(B.n); });
-  $('btnHelp').addEventListener('click', () => { closeAll(); $('introModal').hidden = false; });
   $('btnSound').addEventListener('click', () => { S.sound = !S.sound; renderHud(); save(); });
+  // Dificultad de la Conquista: botón que cicla 🌱→⚔️→🔥 (ajustes completos en Mi cuenta)
+  const bDiff = $('btnDiff');
+  if (bDiff) {
+    const orden = Object.keys(DIFFICULTIES);
+    const pinta = () => { bDiff.textContent = diff().emoji; bDiff.title = `Dificultad: ${diff().name} (pulsa para cambiar)`; };
+    pinta();
+    bDiff.addEventListener('click', () => {
+      S.difficulty = orden[(orden.indexOf(S.difficulty) + 1) % orden.length];
+      S.lastLossTs = Date.now(); save(); refreshMap(); pinta();
+      toast(`${diff().emoji} Dificultad: ${diff().name}`); sfx.click();
+    });
+  }
   $('btnIntroOk').addEventListener('click', () => { S.seenIntro = true; save(); $('introModal').hidden = true; sfx.click(); });
   $('prepPrev').addEventListener('click', () => prepStep(-1));
   $('prepNext').addEventListener('click', () => prepStep(1));
