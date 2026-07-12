@@ -215,6 +215,123 @@
   /* ═══════════════ INTERIOR: capítulos = sub-islas, artículos = territorios ═══════════════ */
   const attackable = (isla, n) => !G.owned[n] && (n === isla.arts[0] || G.owned[n - 1]);
 
+  /* ── subdivisión de una isla en territorios-artículo (mini-Risk) ──
+     Voronoi con relajación de Lloyd sobre la trama interior de la costa,
+     fronteras onduladas por deformación con ruido, y contorno de cada
+     territorio extraído con marching squares. Las semillas nacen en
+     serpentina para que los artículos consecutivos queden vecinos. */
+  const darken = (hex, p) => { const v = parseInt(hex.slice(1), 16); let r = (v >> 16) & 255, g = (v >> 8) & 255, b = v & 255; r *= 1 - p; g *= 1 - p; b *= 1 - p; return `rgb(${r | 0},${g | 0},${b | 0})`; };
+  const toPathC = (pts) => 'M' + pts.map((p) => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L') + 'Z';
+  function chaikinC(pts) {
+    const out = []; const n = pts.length;
+    for (let i = 0; i < n; i++) {
+      const p = pts[i], q = pts[(i + 1) % n];
+      out.push([0.75 * p[0] + 0.25 * q[0], 0.75 * p[1] + 0.25 * q[1]]);
+      out.push([0.25 * p[0] + 0.75 * q[0], 0.25 * p[1] + 0.75 * q[1]]);
+    }
+    return out;
+  }
+  function dpSimplify(pts, tol) {
+    if (pts.length < 4) return pts;
+    const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
+    const st = [[0, pts.length - 1]];
+    while (st.length) {
+      const [a, b] = st.pop(); let dm = 0, im = -1;
+      const ax = pts[a][0], ay = pts[a][1], bx = pts[b][0], by = pts[b][1];
+      const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1e-9;
+      for (let i = a + 1; i < b; i++) {
+        const d = Math.abs(dy * pts[i][0] - dx * pts[i][1] + bx * ay - by * ax) / len;
+        if (d > dm) { dm = d; im = i; }
+      }
+      if (dm > tol) { keep[im] = 1; st.push([a, im], [im, b]); }
+    }
+    return pts.filter((_, i) => keep[i]);
+  }
+  function msContour(lab, val, nx, ny, px, py, step) {
+    const at = (i, j) => (i >= 0 && j >= 0 && i < nx && j < ny && lab[j * nx + i] === val) ? 1 : 0;
+    const segs = new Map(); const key = (p) => p[0].toFixed(1) + ',' + p[1].toFixed(1);
+    const add = (a, b) => { const k = key(a); if (!segs.has(k)) segs.set(k, []); segs.get(k).push(b); };
+    for (let j = -1; j < ny; j++) for (let i = -1; i < nx; i++) {
+      const tl = at(i, j), tr = at(i + 1, j), bl = at(i, j + 1), br = at(i + 1, j + 1);
+      const c = tl * 8 + tr * 4 + br * 2 + bl; if (c === 0 || c === 15) continue;
+      const x = px(i), y = py(j);
+      const T = [x + step / 2, y], R = [x + step, y + step / 2], B = [x + step / 2, y + step], L = [x, y + step / 2];
+      const cases = { 1: [[B, L]], 2: [[R, B]], 3: [[R, L]], 4: [[T, R]], 5: [[T, R], [B, L]], 6: [[T, B]], 7: [[T, L]], 8: [[L, T]], 9: [[B, T]], 10: [[L, T], [R, B]], 11: [[R, T]], 12: [[L, R]], 13: [[B, R]], 14: [[L, B]] };
+      for (const [a, b] of cases[c]) add(a, b);
+    }
+    const loops = []; const used = new Set();
+    for (const [start] of segs) {
+      if (used.has(start)) continue;
+      let cur = start.split(',').map(Number); const loop = [cur];
+      while (true) {
+        const k = key(cur); const nxs = segs.get(k); if (!nxs || !nxs.length) break;
+        used.add(k); cur = nxs.shift();
+        if (key(cur) === start) break; loop.push(cur);
+        if (loop.length > 20000) break;
+      }
+      if (loop.length > 3) loops.push(loop);
+    }
+    loops.sort((a, b) => b.length - a.length);
+    return loops[0] || [];
+  }
+  function territoriosDe(seed, cx0, cy0, rx, ry, arts) {
+    const step = 4.5;
+    const poly = islaPts(cx0, cy0, rx, ry, seed, 0.12);
+    const x0 = cx0 - rx * 1.3, y0 = cy0 - ry * 1.35;
+    const nx = Math.ceil((rx * 2.6) / step), ny = Math.ceil((ry * 2.7) / step);
+    const px = (i) => x0 + (i + 0.5) * step, py = (j) => y0 + (j + 0.5) * step;
+    const inPoly = (x, y) => { let ins = false; for (let a = 0, b = poly.length - 1; a < poly.length; b = a++) { const xi = poly[a][0], yi = poly[a][1], xj = poly[b][0], yj = poly[b][1]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) ins = !ins; } return ins; };
+    const lab = new Int16Array(nx * ny).fill(-1);
+    const cells = [];
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) if (inPoly(px(i), py(j))) cells.push(j * nx + i);
+    // ruido de deformación → fronteras internas onduladas
+    const rndW = mulberry(seed + 51); const GW = 6;
+    const gA = [], gB = [];
+    for (let j = 0; j <= GW; j++) { const ra = [], rb = []; for (let i = 0; i <= GW; i++) { ra.push(rndW() * 2 - 1); rb.push(rndW() * 2 - 1); } gA.push(ra); gB.push(rb); }
+    const noiseAt = (grid, x, y) => {
+      let fx = (x - x0) / (nx * step) * GW, fy = (y - y0) / (ny * step) * GW;
+      fx = Math.min(GW, Math.max(0, fx)); fy = Math.min(GW, Math.max(0, fy));
+      const i0 = fx | 0, j0 = fy | 0, i1 = Math.min(GW, i0 + 1), j1 = Math.min(GW, j0 + 1);
+      const tx = fx - i0, ty = fy - j0, sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+      const a = grid[j0][i0], b = grid[j0][i1], c = grid[j1][i0], d = grid[j1][i1];
+      const top = a + (b - a) * sx; return top + ((c + (d - c) * sx) - top) * sy;
+    };
+    const WARPI = 11;
+    // semillas en serpentina (artículos consecutivos → vecinos)
+    const cols = Math.max(1, Math.round(Math.sqrt(arts.length * (rx / ry))));
+    const rows = Math.ceil(arts.length / cols);
+    const seeds = arts.map((n, k) => {
+      const r = Math.floor(k / cols); let c = k % cols; if (r % 2 === 1) c = cols - 1 - c;
+      const fx = cols === 1 ? 0 : ((c + 0.5) / cols) * 2 - 1;
+      const fy = rows === 1 ? 0 : ((r + 0.5) / rows) * 2 - 1;
+      return [cx0 + fx * rx * 0.62, cy0 + fy * ry * 0.62];
+    });
+    const assign = new Int16Array(cells.length);
+    for (let it = 0; it < 9; it++) {
+      for (let c = 0; c < cells.length; c++) {
+        const idx = cells[c]; const bx = px(idx % nx), by = py((idx / nx) | 0);
+        const x = bx + noiseAt(gA, bx, by) * WARPI, y = by + noiseAt(gB, bx, by) * WARPI;
+        let best = 0, bd = Infinity;
+        for (let s = 0; s < seeds.length; s++) { const d = (x - seeds[s][0]) ** 2 + (y - seeds[s][1]) ** 2; if (d < bd) { bd = d; best = s; } }
+        assign[c] = best;
+      }
+      if (it === 8) break; // última pasada: solo asignar
+      const sx = seeds.map(() => 0), sy = seeds.map(() => 0), sn = seeds.map(() => 0);
+      for (let c = 0; c < cells.length; c++) { const k = assign[c]; const idx = cells[c]; sx[k] += px(idx % nx); sy[k] += py((idx / nx) | 0); sn[k]++; }
+      for (let s = 0; s < seeds.length; s++) if (sn[s]) seeds[s] = [sx[s] / sn[s], sy[s] / sn[s]];
+    }
+    for (let c = 0; c < cells.length; c++) lab[cells[c]] = assign[c];
+    // contorno y centroide de cada territorio
+    return arts.map((n, k) => {
+      const raw = msContour(lab, k, nx, ny, px, py, step);
+      let d = '';
+      if (raw.length > 3) d = toPathC(chaikinC(chaikinC(dpSimplify(raw, 1.1))));
+      let sx = 0, sy = 0, cnt = 0;
+      for (let c = 0; c < cells.length; c++) if (assign[c] === k) { const idx = cells[c]; sx += px(idx % nx); sy += py((idx / nx) | 0); cnt++; }
+      return { n, d, cx: cnt ? sx / cnt : cx0, cy: cnt ? sy / cnt : cy0 };
+    });
+  }
+
   function enterTitulo(tid) { curTid = tid; sfxSafe('click'); renderTitulo(); }
 
   function renderTitulo() {
@@ -223,12 +340,12 @@
     const stage = $('islasStage'); stage.className = 'islas-stage islas-interior'; stage.innerHTML = '';
     $('islasProg').textContent = `${isla.roman ? 'Título ' + isla.roman + ' · ' : ''}${isla.name} · ${ownedCount(isla)}/${isla.arts.length}`;
 
-    // ── layout: empaquetar sub-islas (capítulos) en filas centradas ──
-    const PAD = 26, CELL = 40, GAP = 78, MAXW = 940, TOP = 196, VBW = 1040;
+    // ── layout: una isla grande por capítulo, tamaño ∝ nº de artículos ──
+    const GAP = 56, MAXW = 960, TOP = 186, VBW = 1040;
     const chaps = isla.chapters.map((c) => {
-      const cols = Math.max(2, Math.min(6, Math.ceil(Math.sqrt(c.arts.length * 1.5))));
-      const rows = Math.ceil(c.arts.length / cols);
-      return { c, cols, rows, w: cols * CELL + PAD * 2, h: rows * CELL + 44 };
+      const r = Math.max(46, Math.sqrt(c.arts.length * 2400 / Math.PI));
+      const rx = r * 1.16, ry = r * 0.86;
+      return { c, r, rx, ry, w: rx * 2.5, h: ry * 2.55 };
     });
     const rowsArr = []; let row = [], rw = 0;
     chaps.forEach((ch) => {
@@ -239,12 +356,12 @@
     if (row.length) rowsArr.push({ items: row, w: rw });
     let cy = TOP;
     rowsArr.forEach((r) => {
-      let x = (VBW - r.w) / 2, rowH = 0;
-      r.items.forEach((ch) => { ch.x = x; ch.y = cy; x += ch.w + GAP; rowH = Math.max(rowH, ch.h); });
-      cy += rowH + 132;
+      let x = (VBW - r.w) / 2; const rowH = Math.max(...r.items.map((c2) => c2.h));
+      r.items.forEach((ch) => { ch.cx = x + ch.w / 2; ch.cy = cy + rowH / 2; x += ch.w + GAP; });
+      cy += rowH + 96;
     });
     const placed = chaps;
-    const VBH = Math.max(470, cy - 60);
+    const VBH = Math.max(470, cy - 30);
 
     const svg = el('svg', { viewBox: `0 0 ${VBW} ${VBH}`, class: 'islas-svg' });
     const defs = el('defs');
@@ -266,45 +383,46 @@
     // rutas marítimas punteadas entre capítulos consecutivos
     for (let i = 0; i < placed.length - 1; i++) {
       const a = placed[i], b = placed[i + 1];
-      const ax = a.x + a.w + 26, ay = a.y + a.h / 2, bx = b.x - 26, by = b.y + b.h / 2;
-      svg.appendChild(el('path', { d: `M ${ax.toFixed(0)} ${ay.toFixed(0)} C ${(ax + 26)} ${ay}, ${(bx - 26)} ${by}, ${bx.toFixed(0)} ${by.toFixed(0)}`, fill: 'none', stroke: '#f4e4bd', 'stroke-width': 3, 'stroke-dasharray': '2 10', 'stroke-linecap': 'round', opacity: 0.7 }));
+      const ax = a.cx + a.rx * 1.14, ay = a.cy, bx = b.cx - b.rx * 1.14, by = b.cy;
+      svg.appendChild(el('path', { d: `M ${ax.toFixed(0)} ${ay.toFixed(0)} C ${(ax + 30).toFixed(0)} ${ay.toFixed(0)}, ${(bx - 30).toFixed(0)} ${by.toFixed(0)}, ${bx.toFixed(0)} ${by.toFixed(0)}`, fill: 'none', stroke: '#f4e4bd', 'stroke-width': 3, 'stroke-dasharray': '2 10', 'stroke-linecap': 'round', opacity: 0.7 }));
     }
 
-    // cada capítulo = sub-isla con sus territorios
+    // cada capítulo = una isla grande DIVIDIDA en territorios-artículo
+    const multi = isla.chapters.length > 1;
     placed.forEach((ch) => {
-      const g = el('g', { filter: 'url(#ish2)' });
-      const multi = isla.chapters.length > 1;
-      // sub-isla con costa orgánica (contiene la retícula de territorios)
-      const ccx = ch.x + ch.w / 2, ccy = ch.y + ch.h / 2;
-      const crx = ch.w / 2 + 30, cry = ch.h / 2 + 26;
+      const g = el('g');
       const cseed = seedOf(isla.id + ':' + ch.c.id);
-      g.appendChild(el('ellipse', { cx: ccx, cy: ccy + cry + 4, rx: crx * 0.9, ry: 12, fill: 'rgba(0,0,0,0.22)' }));
-      g.appendChild(el('path', { d: islaPath(ccx, ccy, crx * 1.16, cry * 1.2, cseed + 7, 0.11), fill: 'rgba(180,225,235,0.13)' }));
-      g.appendChild(el('path', { d: islaPath(ccx, ccy, crx * 1.07, cry * 1.09, cseed, 0.10), fill: '#e8dcae', opacity: 0.9 }));
-      g.appendChild(el('path', { d: islaPath(ccx, ccy, crx, cry, cseed, 0.09), fill: 'url(#iland2)', stroke: isla.color, 'stroke-width': 3 }));
-      // palmera en la playa sur + emblema-faro
-      const pal = el('text', { x: ch.x + ch.w - 4, y: ch.y + ch.h + 14, 'text-anchor': 'middle', 'font-size': 20 }); pal.textContent = '🌴'; g.appendChild(pal);
-      g.appendChild(el('circle', { cx: ch.x + 8, cy: ch.y + 6, r: 15, fill: '#fff', stroke: isla.color, 'stroke-width': 2.5 }));
-      const lm = el('text', { x: ch.x + 8, y: ch.y + 12, 'text-anchor': 'middle', 'font-size': 16 }); lm.textContent = isla.emblem; g.appendChild(lm);
+      // costa: sombra + aguas someras + playa + tierra base
+      g.appendChild(el('ellipse', { cx: ch.cx, cy: ch.cy + ch.ry + 14, rx: ch.rx * 0.94, ry: Math.max(10, ch.ry * 0.16), fill: 'rgba(0,0,0,0.22)' }));
+      g.appendChild(el('path', { d: islaPath(ch.cx, ch.cy, ch.rx * 1.18, ch.ry * 1.22, cseed + 7, 0.13), fill: 'rgba(180,225,235,0.13)' }));
+      g.appendChild(el('path', { d: islaPath(ch.cx, ch.cy, ch.rx * 1.08, ch.ry * 1.1, cseed, 0.12), fill: '#e8dcae', opacity: 0.9 }));
+      g.appendChild(el('path', { d: islaPath(ch.cx, ch.cy, ch.rx, ch.ry, cseed, 0.12), fill: 'url(#iland2)' }));
+      // territorios interiores (fronteras tipo Risk)
+      const terrs = territoriosDe(cseed, ch.cx, ch.cy, ch.rx, ch.ry, ch.c.arts);
+      terrs.forEach((t) => {
+        if (!t.d) return;
+        const owned = !!G.owned[t.n], atk = attackable(isla, t.n);
+        const tg = el('g', { class: 'isl-terr' + (atk ? ' atk' : ''), style: atk ? 'cursor:pointer' : '' });
+        const fill = owned ? isla.color : atk ? darken(isla.color, 0.45) : darken(isla.color, 0.74);
+        tg.appendChild(el('path', { d: t.d, class: 'terr-shape', fill, stroke: owned ? 'rgba(255,255,255,0.6)' : atk ? '#f4e4bd' : 'rgba(10,20,32,0.55)', 'stroke-width': atk ? 2.6 : 1.4, 'stroke-linejoin': 'round' }));
+        const lb = el('text', { x: t.cx.toFixed(1), y: (t.cy + 4).toFixed(1), 'text-anchor': 'middle', class: 'terr-num', 'font-size': 12 });
+        lb.textContent = owned ? '✓' : t.n; tg.appendChild(lb);
+        if (atk) { const ti = el('title'); ti.textContent = `Art. ${t.n} — ¡conquistar!`; tg.appendChild(ti); tg.addEventListener('click', () => openQuiz(t.n)); }
+        g.appendChild(tg);
+      });
+      // línea de costa por encima de las fronteras internas
+      g.appendChild(el('path', { d: islaPath(ch.cx, ch.cy, ch.rx, ch.ry, cseed, 0.12), fill: 'none', stroke: isla.color, 'stroke-width': 3 }));
+      // palmera + emblema-faro
+      const pal = el('text', { x: (ch.cx + ch.rx * 0.8).toFixed(0), y: (ch.cy + ch.ry * 0.95).toFixed(0), 'text-anchor': 'middle', 'font-size': 20 }); pal.textContent = '🌴'; g.appendChild(pal);
+      const ex = ch.cx - ch.rx * 0.84, ey = ch.cy - ch.ry * 0.88;
+      g.appendChild(el('circle', { cx: ex, cy: ey, r: 15, fill: '#fff', stroke: isla.color, 'stroke-width': 2.5 }));
+      const lm = el('text', { x: ex, y: ey + 6, 'text-anchor': 'middle', 'font-size': 16 }); lm.textContent = isla.emblem; g.appendChild(lm);
       if (multi) {
         const lw = Math.max(90, ch.c.name.length * 7.4);
-        g.appendChild(el('rect', { x: ccx - lw / 2, y: ch.y - cry + ch.h / 2 - 52, width: lw, height: 24, rx: 12, fill: 'rgba(14,28,43,0.85)', stroke: isla.color, 'stroke-width': 1.5 }));
-        const cn = el('text', { x: ccx, y: ch.y - cry + ch.h / 2 - 35, 'text-anchor': 'middle', 'font-size': 12.5, 'font-weight': 800, fill: '#f0dfb4' }); cn.textContent = ch.c.name; g.appendChild(cn);
+        const ly = ch.cy - ch.ry * 1.24 - 30;
+        g.appendChild(el('rect', { x: ch.cx - lw / 2, y: ly, width: lw, height: 24, rx: 12, fill: 'rgba(14,28,43,0.85)', stroke: isla.color, 'stroke-width': 1.5 }));
+        const cn = el('text', { x: ch.cx, y: ly + 17, 'text-anchor': 'middle', 'font-size': 12.5, 'font-weight': 800, fill: '#f0dfb4' }); cn.textContent = ch.c.name; g.appendChild(cn);
       }
-      // serpentina de celdas + camino
-      const pts = ch.c.arts.map((n, k) => {
-        const row = Math.floor(k / ch.cols); let col = k % ch.cols; if (row % 2 === 1) col = ch.cols - 1 - col;
-        return [ch.x + PAD + col * CELL + CELL / 2, ch.y + 30 + row * CELL + CELL / 2, n];
-      });
-      for (let k = 0; k < pts.length - 1; k++) g.appendChild(el('line', { x1: pts[k][0], y1: pts[k][1], x2: pts[k + 1][0], y2: pts[k + 1][1], stroke: 'rgba(0,0,0,0.22)', 'stroke-width': 3 }));
-      pts.forEach(([px, py, n]) => {
-        const owned = !!G.owned[n], atk = attackable(isla, n);
-        const cell = el('g', { class: 'isl-terr' + (atk ? ' atk' : ''), style: atk ? 'cursor:pointer' : '' });
-        cell.appendChild(el('circle', { cx: px, cy: py, r: 15, fill: owned ? isla.color : atk ? '#0e1c2b' : '#26364a', stroke: owned ? '#fff' : atk ? '#f4e4bd' : '#3a4a60', 'stroke-width': owned ? 2 : atk ? 3 : 1.5 }));
-        const tn = el('text', { x: px, y: py + 4, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: owned ? '#fff' : atk ? '#f4e4bd' : '#8fa0b8' }); tn.textContent = owned ? '✓' : n; cell.appendChild(tn);
-        if (atk) { const t = el('title'); t.textContent = `Art. ${n} — ¡conquistar!`; cell.appendChild(t); cell.addEventListener('click', () => openQuiz(n)); }
-        g.appendChild(cell);
-      });
       svg.appendChild(g);
     });
     stage.appendChild(svg);

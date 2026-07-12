@@ -801,9 +801,11 @@ body {
 .islas-svg { width: 100%; height: auto; display: block; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
 .isl-node.on { transition: transform .12s; }
 .isl-node.on:hover { transform: translateY(-3px); }
-.isl-terr.atk circle { animation: isl-pulse 1.2s ease-in-out infinite; }
-@keyframes isl-pulse { 0%,100% { stroke-width: 3; } 50% { stroke-width: 5; } }
-@media (prefers-reduced-motion: reduce) { .isl-terr.atk circle { animation: none; } }
+.isl-terr.atk .terr-shape { animation: isl-pulse 1.2s ease-in-out infinite; }
+.isl-terr.atk:hover .terr-shape { filter: brightness(1.25); }
+@keyframes isl-pulse { 0%,100% { stroke-width: 2.6; } 50% { stroke-width: 4.5; } }
+@media (prefers-reduced-motion: reduce) { .isl-terr.atk .terr-shape { animation: none; } }
+.terr-num { fill: #fff; font-weight: 800; paint-order: stroke; stroke: rgba(8,16,28,0.8); stroke-width: 2.6px; pointer-events: none; }
 
 /* quiz de conquista */
 .islas-quiz-card { width: min(520px, 100%); border-top: 4px solid var(--tc, var(--gold)); }
