@@ -135,7 +135,12 @@
   /* ═══════════════ zoom y arrastre (rueda, drag y botones ＋/−/⟳) ═══════════════ */
   function attachZoom(svg, stage, vbw, vbh) {
     let vx = 0, vy = 0, vw = vbw, vh = vbh, moved = false;
-    const apply = () => svg.setAttribute('viewBox', `${vx.toFixed(1)} ${vy.toFixed(1)} ${vw.toFixed(1)} ${vh.toFixed(1)}`);
+    const apply = () => {
+      svg.setAttribute('viewBox', `${vx.toFixed(1)} ${vy.toFixed(1)} ${vw.toFixed(1)} ${vh.toFixed(1)}`);
+      // sin zoom: el dedo hace scroll de la página; con zoom: arrastra el mapa
+      svg.style.touchAction = (vw < vbw - 0.5) ? 'none' : 'pan-y';
+    };
+    apply();
     const clamp = () => {
       vw = Math.min(vbw, Math.max(vbw / 5, vw)); vh = vw * vbh / vbw;
       vx = Math.max(0, Math.min(vbw - vw, vx)); vy = Math.max(0, Math.min(vbh - vh, vy));
@@ -146,7 +151,11 @@
     // OJO: sin setPointerCapture — capturar el puntero desvía el click al svg
     // y los territorios/islas dejarían de recibirlo.
     let drag = null;
-    svg.addEventListener('pointerdown', (e) => { if (e.button !== 0 && e.pointerType === 'mouse') return; drag = { x: e.clientX, y: e.clientY, vx, vy }; moved = false; });
+    svg.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      if (e.pointerType !== 'mouse' && vw >= vbw - 0.5) return; // táctil sin zoom → scroll normal
+      drag = { x: e.clientX, y: e.clientY, vx, vy }; moved = false;
+    });
     svg.addEventListener('pointermove', (e) => {
       if (!drag) return;
       const r = svg.getBoundingClientRect(); const sc = vw / r.width;
@@ -272,6 +281,15 @@
 
     stage.appendChild(svg);
     attachZoom(svg, stage, VBW, VBH);
+    // llevar la vista hasta la isla en juego (en el mapa vertical el START está abajo)
+    let foco = ISLAS.findIndex((x, i) => isUnlocked(i) && !isComplete(x));
+    if (foco < 0) foco = 11;
+    const cont = $('islas');
+    requestAnimationFrame(() => {
+      const r = svg.getBoundingClientRect(), cr = cont.getBoundingClientRect();
+      const objetivo = cont.scrollTop + (r.top - cr.top) + (POS[foco][1] / VBH) * r.height - cont.clientHeight * 0.55;
+      cont.scrollTop = Math.max(0, objetivo);
+    });
     if (won) setTimeout(() => victory(), 300);
   }
   function badge(g, x, y, fill, txt) {

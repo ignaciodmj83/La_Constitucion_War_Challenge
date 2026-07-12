@@ -799,9 +799,10 @@ body {
 .game-card-wide { grid-column: 1 / -1; }
 .islas-stage { max-width: 1040px; margin: 0 auto; padding: 10px 14px 40px; position: relative; }
 .islas-svg { width: 100%; height: auto; display: block; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.45);
-  touch-action: none; cursor: grab; }
+  touch-action: pan-y; cursor: grab; }
 .islas-svg:active { cursor: grabbing; }
-.islas-zoomctl { position: absolute; right: 26px; bottom: 52px; display: flex; flex-direction: column; gap: 6px; z-index: 5; }
+/* fijos en pantalla: siempre visibles aunque el mapa sea muy alto */
+.islas-zoomctl { position: fixed; right: 12px; bottom: 18px; display: flex; flex-direction: column; gap: 6px; z-index: 46; }
 .islas-zoomctl button { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line);
   background: rgba(16,28,43,0.92); color: var(--text); font-size: 19px; font-weight: 800; cursor: pointer; line-height: 1; }
 .islas-zoomctl button:hover { border-color: var(--gold); color: var(--gold); }
