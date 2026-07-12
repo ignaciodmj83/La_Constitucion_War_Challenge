@@ -354,7 +354,11 @@
   function summary() {
     const pct = Math.round(T.wins / CASOS.length * 100);
     const b = loadBest(); b.total = CASOS.length; b.best = b.best || {};
-    b.best[T.mode] = Math.max(b.best[T.mode] || 0, T.wins); saveBest(b);
+    b.best[T.mode] = Math.max(b.best[T.mode] || 0, T.wins);
+    b.bestD = b.bestD || {};
+    const bd = b.bestD[T.diff] = b.bestD[T.diff] || {};
+    bd[T.mode] = Math.max(bd[T.mode] || 0, T.wins);
+    saveBest(b);
     if (typeof save === 'function') save();
     const veredicto = pct >= 80 ? '🏆 Toga de honor' : pct >= 50 ? '⚖️ Letrado/a solvente' : '📚 Necesitas más sala';
     $('tribStage').innerHTML = `

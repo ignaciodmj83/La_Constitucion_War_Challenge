@@ -42,6 +42,11 @@
     dificil: { name: 'Difícil', emoji: '🔥', factor: 1.22, desc: 'rivales expertos' },
   };
   if (!TDIFF[store.diff]) store.diff = 'medio';
+  // cada dificultad guarda sus propios récords (jugadas independientes)
+  if (!store.perDiff) {
+    store.perDiff = {};
+    if (store.bestWedges != null || store.wins) store.perDiff.medio = { bestWedges: store.bestWedges || 0, wins: store.wins || 0 };
+  }
 
   let T = null, SPTIT = [], SPKTIT = [];
   function genSpaces() {
@@ -277,6 +282,9 @@
     T.over = true; T.busy = false; const human = winnerIdx === 0;
     store.bestWedges = Math.max(store.bestWedges || 0, T.players[0].wedges.size);
     if (human) store.wins = (store.wins || 0) + 1;
+    const pd = store.perDiff[store.diff] = store.perDiff[store.diff] || { bestWedges: 0, wins: 0 };
+    pd.bestWedges = Math.max(pd.bestWedges, T.players[0].wedges.size);
+    if (human) pd.wins++;
     saveStore(); if (typeof save === 'function') save();
     const q = $('trivQuiz'); q.hidden = false;
     const unidadArt = (typeof PERSONAJES !== 'undefined') ? PERSONAJES.portrait('unidad', 'sm') : `<div class="ts-emoji">${human ? '🏆' : '🤖'}</div>`;

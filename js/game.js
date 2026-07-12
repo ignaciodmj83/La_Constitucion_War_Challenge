@@ -81,7 +81,7 @@ function defaultState() {
     score: 0, xp: 0, bestCombo: 0, prestige: 0,
     daily: { streak: 1, last: todayKey() },
     ach: [], sound: true, music: false, voice: true, seenIntro: false,
-    difficulty: 'normal', lastLossTs: Date.now(),
+    difficulty: 'normal', lastLossTs: Date.now(), runs: {},
     stats: { answers: 0, correct: 0, conquests: 0, defenses: 0, fastest: null, prepared: 0, playMs: 0, mastered: {}, best: {}, days: {}, hiConq: {}, lastActive: 0 },
   };
 }
@@ -100,6 +100,7 @@ function loadState() {
     if (!s.stats.days) s.stats.days = {};
     if (!s.stats.hiConq) s.stats.hiConq = {};
     if (!s.stats.lastActive) s.stats.lastActive = 0;
+    if (!s.runs) s.runs = {};
     return s;
   } catch { return defaultState(); }
 }
@@ -265,6 +266,25 @@ function speakArticle(n) {
   u.onend = () => { if (typeof window.pjOnSpeakEnd === 'function') window.pjOnSpeakEnd(); };
   u.onerror = () => { if (typeof window.pjOnSpeakEnd === 'function') window.pjOnSpeakEnd(); };
   try { speechSynthesis.speak(u); } catch { /* */ }
+}
+
+/* Cada dificultad es una PARTIDA distinta de la Conquista: al cambiar de
+   nivel se guarda el mundo actual en S.runs y se carga (o crea) el mundo
+   de la nueva dificultad. Puntuación, XP y logros son comunes. */
+function switchDifficulty(nd) {
+  if (nd === S.difficulty || !DIFFICULTIES[nd]) return;
+  S.runs = S.runs || {};
+  S.runs[S.difficulty] = { owned: S.owned, prepared: S.prepared, mem: S.mem, lastLossTs: S.lastLossTs, prestige: S.prestige };
+  const r = S.runs[nd];
+  if (r) {
+    S.owned = r.owned || { 1: true }; S.prepared = r.prepared || {}; S.mem = r.mem || {};
+    S.lastLossTs = r.lastLossTs || Date.now(); S.prestige = r.prestige || 0;
+  } else {
+    const mem = {}; for (const t of TITULOS) mem[t.id] = Date.now();
+    S.owned = { 1: true }; S.prepared = {}; S.mem = mem; S.lastLossTs = Date.now(); S.prestige = 0;
+  }
+  for (const t of TITULOS) if (!S.mem[t.id]) S.mem[t.id] = Date.now();
+  S.difficulty = nd; save();
 }
 
 /* ───────────────────────── El Olvido / niveles ───────────────────────── */
@@ -923,8 +943,8 @@ function renderSettings() {
       ${toggle('voice', S.voice, 'Voz del artículo', 'Botón 🗣️ para escuchar la explicación en voz alta.', '🗣️')}
     </div>`;
   box.querySelectorAll('.diff-opt').forEach((b) => b.addEventListener('click', () => {
-    S.difficulty = b.dataset.diff; S.lastLossTs = Date.now(); save();
-    renderSettings(); refreshMap(); toast(`${diff().emoji} Dificultad: ${diff().name}`); sfx.click();
+    switchDifficulty(b.dataset.diff);
+    renderSettings(); refreshMap(); renderHud(); toast(`${diff().emoji} Dificultad: ${diff().name} — partida propia de este nivel`); sfx.click();
   }));
   box.querySelectorAll('.set-toggle').forEach((b) => b.addEventListener('click', () => {
     const id = b.dataset.toggle; S[id] = !S[id]; save(); renderSettings(); renderHud();
@@ -948,9 +968,9 @@ function init() {
     const pinta = () => { bDiff.textContent = diff().emoji; bDiff.title = `Dificultad: ${diff().name} (pulsa para cambiar)`; };
     pinta();
     bDiff.addEventListener('click', () => {
-      S.difficulty = orden[(orden.indexOf(S.difficulty) + 1) % orden.length];
-      S.lastLossTs = Date.now(); save(); refreshMap(); pinta();
-      toast(`${diff().emoji} Dificultad: ${diff().name}`); sfx.click();
+      switchDifficulty(orden[(orden.indexOf(S.difficulty) + 1) % orden.length]);
+      refreshMap(); renderHud(); pinta();
+      toast(`${diff().emoji} Dificultad: ${diff().name} — partida propia de este nivel`); sfx.click();
     });
   }
   $('btnIntroOk').addEventListener('click', () => { S.seenIntro = true; save(); $('introModal').hidden = true; sfx.click(); });

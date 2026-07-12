@@ -1,8 +1,7 @@
 /* =========================================================================
    Estadísticas unificadas (accesibles desde el menú principal).
    Tres KPI para el opositor:
-     1) DOMINIO — lo bien que te sabes la Constitución. Media de tu maestría en
-        los 4 juegos; cada juego solo llega a 1.0 a su máxima dificultad, así
+     1) DOMINIO — lo bien que te sabes la Constitución. Media de tu maestría en los 5 juegos; cada juego solo llega a 1.0 a su máxima dificultad, así
         que el 100% exige ser maestro en los 4 al máximo. Filtrable por juego.
      2) FRESCURA — lo reciente de esa valoración (decae con los días sin jugar).
      3) ESFUERZO — tu tiempo de estudio en el tiempo (curva).
@@ -19,9 +18,29 @@
   /* ── maestría por juego (0..1); 1.0 solo a máxima dificultad ── */
   function mConquista() { const hi = Sstats().hiConq || {}; let m = 0; ['facil', 'normal', 'dificil'].forEach((d) => { m = Math.max(m, ((hi[d] || 0) / 169) * WD[d]); }); return m; }
   function mMemoria() { const o = pget('ce78_memoria_v2'); const hi = o.hi || {}; let m = 0; ['facil', 'medio', 'dificil'].forEach((d) => { m = Math.max(m, ((hi[d] || 0) / 169) * WD[d]); }); return m; }
-  function mTribunal() { const o = pget('ce78_tribunal_v1'); const b = o.best || {}; const N = o.total || 10; return ((Math.min(b.abogado || 0, N) / N) + (Math.min(b.juez || 0, N) / N)) / 2; }
-  function mTrivial() { const o = pget('ce78_trivial_v1'); if (o.bestWedges != null) return Math.min(1, o.bestWedges / 11); return Math.min(1, (o.bestCorrect || 0) / 12); }
-  function mIslas() { const o = pget('ce78_islas_v1'); const owned = Object.keys(o.owned || {}).length; return (owned / 169) * (WD[o.diff] || 0.8); }
+  function mTribunal() {
+    const o = pget('ce78_tribunal_v1'); const N = o.total || 10; let m = 0;
+    const prog = (b) => ((Math.min(b.abogado || 0, N) / N) + (Math.min(b.juez || 0, N) / N)) / 2;
+    if (o.bestD) for (const d of Object.keys(o.bestD)) m = Math.max(m, prog(o.bestD[d]) * (WD[d] || 0.8));
+    else if (o.best) m = prog(o.best) * 0.8; // datos antiguos sin dificultad: tope Medio
+    return m;
+  }
+  function mTrivial() {
+    const o = pget('ce78_trivial_v1'); let m = 0;
+    const pd = o.perDiff || (o.bestWedges != null ? { medio: { bestWedges: o.bestWedges, wins: o.wins || 0 } } : {});
+    for (const d of Object.keys(pd)) {
+      const r = pd[d] || {};
+      const prog = (r.wins || 0) > 0 ? 1 : Math.min(1, (r.bestWedges || 0) / 11) * 0.9; // solo GANAR da el 100% del nivel
+      m = Math.max(m, prog * (WD[d] || 0.8));
+    }
+    return m;
+  }
+  function mIslas() {
+    const o = pget('ce78_islas_v1'); let m = 0;
+    const runs = o.runs || (o.owned ? { [WD[o.diff] ? o.diff : 'medio']: { owned: o.owned } } : {});
+    for (const d of Object.keys(runs)) m = Math.max(m, (Object.keys((runs[d] || {}).owned || {}).length / 169) * (WD[d] || 0.8));
+    return m;
+  }
 
   const GAMES = [
     { key: 'conquista', name: 'Conquista', emoji: '⚔️', color: '#e0a52e', m: mConquista },
@@ -133,22 +152,26 @@
     return row('facil', '🌱 Fácil') + row('medio', '⚔️ Medio') + row('dificil', '🔥 Difícil');
   }
   function detailTribunal() {
-    const o = pget('ce78_tribunal_v1'); const b = o.best || {}; const N = o.total || 10;
-    return `<div class="st-line"><span>⚖️ Abogado/a</span><b>${b.abogado || 0}/${N} casos</b></div><div class="st-line"><span>👨‍⚖️ Juez/a</span><b>${b.juez || 0}/${N} casos</b></div>`;
+    const o = pget('ce78_tribunal_v1'); const N = o.total || 10; const bd = o.bestD || {};
+    const fila = (d, nm) => { const b = bd[d] || {}; return `<div class="st-line"><span>${nm}</span><b>⚖️ ${b.abogado || 0}/${N} · 👨‍⚖️ ${b.juez || 0}/${N}</b></div>`; };
+    return fila('facil', '🌱 Fácil') + fila('medio', '⚔️ Medio') + fila('dificil', '🔥 Difícil');
   }
   function detailTrivial() {
-    const o = pget('ce78_trivial_v1');
-    return `<div class="st-line"><span>Mejor ronda</span><b>${o.bestCorrect || 0}/12 aciertos</b></div><div class="st-line"><span>Récord de puntos</span><b>${o.best || 0}</b></div>`;
+    const o = pget('ce78_trivial_v1'); const pd = o.perDiff || {};
+    const fila = (d, nm) => { const r = pd[d] || {}; return `<div class="st-line"><span>${nm}</span><b>⭐ ${r.bestWedges || 0}/11 · 🏆 ${r.wins || 0} victoria(s)</b></div>`; };
+    return fila('facil', '🌱 Fácil') + fila('medio', '⚔️ Medio') + fila('dificil', '🔥 Difícil');
   }
   function detailIslas() {
-    const o = pget('ce78_islas_v1'); const owned = o.owned || {};
+    const o = pget('ce78_islas_v1');
+    const runs = o.runs || (o.owned ? { medio: { owned: o.owned } } : {});
     const rango = (r) => { const out = []; for (let n = r[0]; n <= r[1]; n++) out.push(n); return out; };
-    const done = (typeof TITULOS !== 'undefined')
-      ? TITULOS.filter((t) => t.islands.flatMap((is) => rango(is.arts)).every((n) => owned[n])).length : 0;
-    const dnames = { facil: '🌱 Fácil', medio: '⚔️ Medio', dificil: '🔥 Difícil' };
-    return `<div class="st-line"><span>🏝️ Islas completadas</span><b>${done}/11</b></div>
-      <div class="st-line"><span>Territorios conquistados</span><b>${Object.keys(owned).length}/169</b></div>
-      <div class="st-line"><span>Dificultad actual</span><b>${dnames[o.diff] || '⚔️ Medio'}</b></div>`;
+    const fila = (d, nm) => {
+      const owned = (runs[d] || {}).owned || {};
+      const done = (typeof TITULOS !== 'undefined')
+        ? TITULOS.filter((t) => t.islands.flatMap((is) => rango(is.arts)).every((n) => owned[n])).length : 0;
+      return `<div class="st-line"><span>${nm}</span><b>🏝️ ${done}/11 · ${Object.keys(owned).length}/169</b></div>`;
+    };
+    return fila('facil', '🌱 Fácil') + fila('medio', '⚔️ Medio') + fila('dificil', '🔥 Difícil');
   }
 
   function renderStats() {
@@ -160,14 +183,14 @@
     if (filter === 'all') {
       kpiPct = dominioGlobal() * 100; kpiColor = 'var(--gold)';
       kpiTitle = 'Dominio de la Constitución';
-      kpiSub = 'Media de tu maestría en los 4 juegos. Solo llegas al 100% siendo maestro en los 4 a la máxima dificultad.';
+      kpiSub = 'Media de tu maestría en los 5 juegos. El 100% solo se alcanza GANANDO los 5 en su dificultad máxima.';
       detail = `<div class="st-breakdown">${GAMES.map((g) => `
         <div class="st-game"><div class="st-game-head"><span>${g.emoji} ${g.name}</span><b>${Math.round(g.m() * 100)}%</b></div>${bar(g.m() * 100, g.color)}</div>`).join('')}</div>`;
     } else {
       const g = GAMES.find((x) => x.key === filter);
       kpiPct = g.m() * 100; kpiColor = g.color;
       kpiTitle = `Maestría en ${g.name}`;
-      kpiSub = 'Solo llega al 100% completando el juego a su máxima dificultad.';
+      kpiSub = 'Cada dificultad es una jugada distinta; el 100% exige ganar en Difícil.';
       const det = filter === 'conquista' ? detailConquista() : filter === 'memoria' ? detailMemoria() : filter === 'tribunal' ? detailTribunal() : filter === 'islas' ? detailIslas() : detailTrivial();
       detail = `<div class="st-detail">${det}</div>`;
     }

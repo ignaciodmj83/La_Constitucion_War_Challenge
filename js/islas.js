@@ -28,33 +28,54 @@
   const FIN = { id: 'unidad', name: 'La Unidad de España', color: '#c9a13b', emblem: '🛡️' };
   const idxOf = (tid) => ISLAS.findIndex((x) => x.id === tid);
 
-  /* ── estado ── */
+  /* ── estado: cada dificultad es una PARTIDA distinta (su propio mapa) ── */
   const KEY = 'ce78_islas_v1';
   const DIFF = {
-    facil: { name: 'Fácil', emoji: '🌱', opts: 2, desc: '2 opciones' },
-    medio: { name: 'Medio', emoji: '⚔️', opts: 3, desc: '3 opciones' },
-    dificil: { name: 'Difícil', emoji: '🔥', opts: 4, desc: 'todas las opciones' },
+    facil: { name: 'Fácil', emoji: '🌱', opts: 2, lives: null, time: null, desc: '2 opciones · sin prisa' },
+    medio: { name: 'Medio', emoji: '⚔️', opts: 3, lives: 3, time: 25, desc: '3 opciones · 25 s · 3 vidas' },
+    dificil: { name: 'Difícil', emoji: '🔥', opts: 4, lives: 1, time: 15, desc: 'todas · 15 s · 1 vida' },
   };
+  const freshRun = () => ({ owned: {}, fails: {} });
   function load() {
-    try { const o = JSON.parse(localStorage.getItem(KEY)); if (o && o.owned) { if (!DIFF[o.diff]) o.diff = 'medio'; return o; } } catch { /* */ }
-    return { diff: 'medio', owned: {} };
+    try {
+      const o = JSON.parse(localStorage.getItem(KEY));
+      if (o && o.runs) {
+        if (!DIFF[o.diff]) o.diff = 'medio';
+        for (const k of Object.keys(DIFF)) { if (!o.runs[k]) o.runs[k] = freshRun(); if (!o.runs[k].fails) o.runs[k].fails = {}; }
+        return o;
+      }
+      if (o && o.owned) { // migración: el progreso antiguo pasa a su dificultad
+        const d = DIFF[o.diff] ? o.diff : 'medio';
+        const runs = { facil: freshRun(), medio: freshRun(), dificil: freshRun() };
+        runs[d].owned = o.owned;
+        return { diff: d, runs };
+      }
+    } catch { /* */ }
+    return { diff: 'medio', runs: { facil: freshRun(), medio: freshRun(), dificil: freshRun() } };
   }
   let G = load();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(G)); } catch { /* */ } };
+  const run = () => G.runs[G.diff];
 
-  const ownedCount = (isla) => isla.arts.filter((n) => G.owned[n]).length;
+  const ownedCount = (isla) => isla.arts.filter((n) => run().owned[n]).length;
   const isComplete = (isla) => ownedCount(isla) === isla.arts.length;
   const isUnlocked = (i) => i === 0 || isComplete(ISLAS[i - 1]);
-  const totalOwned = () => Object.keys(G.owned).length;
+  const totalOwned = () => Object.keys(run().owned).length;
+  const livesLeft = (isla) => { const l = DIFF[G.diff].lives; if (l == null) return null; return Math.max(0, l - (run().fails[isla.id] || 0)); };
 
   let view = 'mundo', curTid = null;
 
-  /* ═══════════════ barra de dificultad ═══════════════ */
+  /* ═══════════════ barra de dificultad (cada una, una partida) ═══════════════ */
   function renderDiff() {
     const bar = $('islasDiffBar'); if (!bar) return;
     bar.innerHTML = Object.entries(DIFF).map(([k, d]) =>
       `<button class="mem-diff ${G.diff === k ? 'sel' : ''}" data-d="${k}"><b>${d.emoji} ${d.name}</b><small>${d.desc}</small></button>`).join('');
-    bar.querySelectorAll('.mem-diff').forEach((b) => b.addEventListener('click', () => { G.diff = b.dataset.d; save(); sfxSafe('click'); renderDiff(); }));
+    bar.querySelectorAll('.mem-diff').forEach((b) => b.addEventListener('click', () => {
+      if (G.diff === b.dataset.d) return;
+      G.diff = b.dataset.d; save(); sfxSafe('click'); renderDiff();
+      // cada dificultad tiene su propio mapa: se entra en él donde estuviera
+      if (view === 'titulo' && isUnlocked(idxOf(curTid))) renderTitulo(); else renderWorld();
+    }));
   }
 
   /* ═══════════════ costas orgánicas (islas de verdad, no rectángulos) ═══════════════ */
@@ -122,17 +143,19 @@
     const toVB = (e) => { const r = svg.getBoundingClientRect(); return { x: vx + (e.clientX - r.left) / r.width * vw, y: vy + (e.clientY - r.top) / r.height * vh }; };
     const zoomAt = (fx, fy, f) => { vx = fx - (fx - vx) / f; vy = fy - (fy - vy) / f; vw /= f; vh = vw * vbh / vbw; clamp(); apply(); };
     svg.addEventListener('wheel', (e) => { e.preventDefault(); const p = toVB(e); zoomAt(p.x, p.y, e.deltaY < 0 ? 1.2 : 1 / 1.2); }, { passive: false });
+    // OJO: sin setPointerCapture — capturar el puntero desvía el click al svg
+    // y los territorios/islas dejarían de recibirlo.
     let drag = null;
-    svg.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, vx, vy }; moved = false; try { svg.setPointerCapture(e.pointerId); } catch { /* */ } });
+    svg.addEventListener('pointerdown', (e) => { if (e.button !== 0 && e.pointerType === 'mouse') return; drag = { x: e.clientX, y: e.clientY, vx, vy }; moved = false; });
     svg.addEventListener('pointermove', (e) => {
       if (!drag) return;
       const r = svg.getBoundingClientRect(); const sc = vw / r.width;
       const dx = (e.clientX - drag.x), dy = (e.clientY - drag.y);
       if (Math.abs(dx) + Math.abs(dy) > 6) moved = true;
-      vx = drag.vx - dx * sc; vy = drag.vy - dy * sc; clamp(); apply();
+      if (moved) { vx = drag.vx - dx * sc; vy = drag.vy - dy * sc; clamp(); apply(); }
     });
     const endDrag = () => { drag = null; };
-    svg.addEventListener('pointerup', endDrag); svg.addEventListener('pointercancel', endDrag);
+    svg.addEventListener('pointerup', endDrag); svg.addEventListener('pointercancel', endDrag); svg.addEventListener('pointerleave', endDrag);
     // si hubo arrastre, el click que sigue no debe conquistar territorios
     svg.addEventListener('click', (e) => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
     // botones flotantes
@@ -159,11 +182,18 @@
   }
 
   /* ═══════════════ MUNDO: ruta de islas ═══════════════ */
-  const POS = [
+  // horizontal (escritorio) y vertical (móvil): serpentina de abajo arriba
+  const POS_H = [
     [150, 620], [420, 610], [690, 615], [955, 595],
     [1000, 400], [740, 415], [470, 400], [180, 400],
     [300, 200], [545, 190], [795, 205], [1050, 135],
   ];
+  const POS_V = [
+    [180, 1650], [480, 1570], [180, 1390], [480, 1300],
+    [180, 1120], [480, 1035], [180, 855], [480, 770],
+    [180, 590], [480, 505], [180, 325], [470, 180],
+  ];
+  const esVertical = () => (typeof window !== 'undefined') && window.innerWidth < 760;
   function smooth(pts) {
     let d = `M ${pts[0][0]} ${pts[0][1]}`;
     for (let i = 0; i < pts.length - 1; i++) {
@@ -180,15 +210,18 @@
     const done = ISLAS.filter(isComplete).length;
     $('islasProg').textContent = `Isla ${Math.min(done + 1, ISLAS.length)}/${ISLAS.length} · ${totalOwned()}/169 territorios`;
 
-    const svg = el('svg', { viewBox: '0 0 1200 720', class: 'islas-svg' });
+    const vert = esVertical();
+    const POS = vert ? POS_V : POS_H;
+    const VBW = vert ? 660 : 1200, VBH = vert ? 1800 : 720;
+    const svg = el('svg', { viewBox: `0 0 ${VBW} ${VBH}`, class: 'islas-svg' });
     const defs = el('defs');
     defs.innerHTML = `
       <radialGradient id="isea" cx="50%" cy="42%" r="75%"><stop offset="0" stop-color="#2f6f8f"/><stop offset="0.55" stop-color="#1f5473"/><stop offset="1" stop-color="#143a52"/></radialGradient>
       <radialGradient id="iland" cx="45%" cy="35%" r="75%"><stop offset="0" stop-color="#d8c58a"/><stop offset="0.6" stop-color="#b7a86a"/><stop offset="1" stop-color="#8f8450"/></radialGradient>
       <filter id="ish" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000" flood-opacity="0.45"/></filter>`;
     svg.appendChild(defs);
-    svg.appendChild(el('rect', { x: 0, y: 0, width: 1200, height: 720, fill: 'url(#isea)' }));
-    let waves = ''; for (let r = 0; r < 6; r++) { const y = 110 + r * 110; waves += `<path d="M0 ${y} q 40 -12 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>`; }
+    svg.appendChild(el('rect', { x: 0, y: 0, width: VBW, height: VBH, fill: 'url(#isea)' }));
+    let waves = ''; for (let r = 0; r < Math.ceil(VBH / 120); r++) { const y = 110 + r * 110; waves += `<path d="M0 ${y} q 40 -12 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>`; }
     const wg = el('g'); wg.innerHTML = waves; svg.appendChild(wg);
 
     const all = ISLAS.map((x, i) => [POS[i][0], POS[i][1]]); all.push(POS[11]);
@@ -238,7 +271,7 @@
     svg.appendChild(fg);
 
     stage.appendChild(svg);
-    attachZoom(svg, stage, 1200, 720);
+    attachZoom(svg, stage, VBW, VBH);
     if (won) setTimeout(() => victory(), 300);
   }
   function badge(g, x, y, fill, txt) {
@@ -248,7 +281,7 @@
   }
 
   /* ═══════════════ INTERIOR: capítulos = sub-islas, artículos = territorios ═══════════════ */
-  const attackable = (isla, n) => !G.owned[n] && (n === isla.arts[0] || G.owned[n - 1]);
+  const attackable = (isla, n) => !run().owned[n] && (n === isla.arts[0] || run().owned[n - 1]);
 
   /* ── subdivisión de una isla en territorios-artículo (mini-Risk) ──
      Voronoi con relajación de Lloyd sobre la trama interior de la costa,
@@ -376,7 +409,8 @@
     $('islasProg').textContent = `${isla.roman ? 'Título ' + isla.roman + ' · ' : ''}${isla.name} · ${ownedCount(isla)}/${isla.arts.length}`;
 
     // ── layout: una isla grande por capítulo, tamaño ∝ nº de artículos ──
-    const GAP = 56, MAXW = 960, TOP = 186, VBW = 1040;
+    const narrow = (typeof window !== 'undefined') && window.innerWidth < 760;
+    const GAP = 56, MAXW = narrow ? 500 : 960, TOP = 186, VBW = narrow ? 560 : 1040;
     const chaps = isla.chapters.map((c) => {
       const r = Math.max(46, Math.sqrt(c.arts.length * 2400 / Math.PI));
       const rx = r * 1.16, ry = r * 0.86;
@@ -411,9 +445,13 @@
 
     // cabecera: guardián + banner del título
     portrait(svg, isla.id, 74, 74, 52, isla.color, isla.emblem);
-    svg.appendChild(el('rect', { x: 150, y: 40, width: 720, height: 68, rx: 14, fill: 'rgba(14,28,43,0.72)', stroke: isla.color, 'stroke-width': 2 }));
+    svg.appendChild(el('rect', { x: 150, y: 40, width: Math.min(720, VBW - 170), height: 68, rx: 14, fill: 'rgba(14,28,43,0.72)', stroke: isla.color, 'stroke-width': 2 }));
     const bt = el('text', { x: 172, y: 76, 'font-size': 24, 'font-weight': 900, fill: '#fff' }); bt.textContent = `${isla.roman ? 'Título ' + isla.roman + ' · ' : ''}${isla.name}`; svg.appendChild(bt);
-    const bs = el('text', { x: 172, y: 98, 'font-size': 13, fill: '#9fb3cc' }); bs.textContent = isComplete(isla) ? '✓ Isla completada — repasa los territorios' : 'Conquista los territorios en orden respondiendo su pregunta'; svg.appendChild(bs);
+    const vd = livesLeft(isla);
+    const bs = el('text', { x: 172, y: 98, 'font-size': 13, fill: '#9fb3cc' });
+    bs.textContent = isComplete(isla) ? '✓ Isla completada — repasa los territorios'
+      : 'Conquista los territorios en orden' + (vd != null ? ` · vidas: ${'❤️'.repeat(vd) || '—'}` : '') + (DIFF[G.diff].time ? ` · ⏱️ ${DIFF[G.diff].time} s` : '');
+    svg.appendChild(bs);
 
     // rutas marítimas punteadas entre capítulos consecutivos
     for (let i = 0; i < placed.length - 1; i++) {
@@ -436,7 +474,7 @@
       const terrs = territoriosDe(cseed, ch.cx, ch.cy, ch.rx, ch.ry, ch.c.arts);
       terrs.forEach((t) => {
         if (!t.d) return;
-        const owned = !!G.owned[t.n], atk = attackable(isla, t.n);
+        const owned = !!run().owned[t.n], atk = attackable(isla, t.n);
         const tg = el('g', { class: 'isl-terr' + (atk ? ' atk' : ''), style: atk ? 'cursor:pointer' : '' });
         const fill = owned ? isla.color : atk ? darken(isla.color, 0.45) : darken(isla.color, 0.74);
         tg.appendChild(el('path', { d: t.d, class: 'terr-shape', fill, stroke: owned ? 'rgba(255,255,255,0.6)' : atk ? '#f4e4bd' : 'rgba(10,20,32,0.55)', 'stroke-width': atk ? 2.6 : 1.4, 'stroke-linejoin': 'round' }));
@@ -464,20 +502,28 @@
     attachZoom(svg, stage, VBW, VBH);
   }
 
-  /* ═══════════════ conquista de un territorio (pregunta) ═══════════════ */
+  /* ═══════════════ conquista de un territorio (pregunta + tiempo + vidas) ═══════════════ */
+  let quizTimer = null;
+  function clearQuizTimer() { if (quizTimer) { clearInterval(quizTimer); quizTimer = null; } }
+  function resetIsla(isla) {
+    const o = run().owned; isla.arts.forEach((n) => { delete o[n]; });
+    run().fails[isla.id] = 0; save();
+  }
   function openQuiz(n) {
     const isla = ISLAS[idxOf(curTid)]; const a = ARTICLES[n]; if (!a) return;
-    const nopts = DIFF[G.diff].opts;
+    const d = DIFF[G.diff];
     let opts;
-    if (nopts >= a.o.length) opts = a.o.map((_, i) => i);
-    else { const wrong = shuffle(a.o.map((_, i) => i).filter((i) => i !== a.c)).slice(0, nopts - 1); opts = shuffle([a.c, ...wrong]); }
-    if (nopts >= a.o.length) opts = shuffle(opts);
+    if (d.opts >= a.o.length) opts = shuffle(a.o.map((_, i) => i));
+    else { const wrong = shuffle(a.o.map((_, i) => i).filter((i) => i !== a.c)).slice(0, d.opts - 1); opts = shuffle([a.c, ...wrong]); }
     const emb = (a.img && a.img[0]) || isla.emblem;
+    const vidas = livesLeft(isla);
     const ov = $('islasQuiz');
     ov.innerHTML = `<div class="card islas-quiz-card" style="--tc:${isla.color}">
       <button class="card-close" data-close="islasQuiz">✕</button>
       <div class="iq-head"><span class="iq-sym" style="background:${isla.color}">${emb}</span>
-        <div><div class="iq-art">Art. ${n}${isla.roman ? ' · Título ' + isla.roman : ''}</div><div class="iq-t">${a.t}</div></div></div>
+        <div><div class="iq-art">Art. ${n}${isla.roman ? ' · Título ' + isla.roman : ''}</div><div class="iq-t">${a.t}</div></div>
+        ${vidas != null ? `<span class="iq-vidas" title="Vidas en esta isla">${'❤️'.repeat(vidas)}</span>` : ''}</div>
+      ${d.time ? '<div class="iq-timer"><div id="iqTimerFill" class="iq-timer-fill"></div></div>' : ''}
       <p class="iq-q">${a.q}</p>
       <div class="iq-opts" id="iqOpts"></div>
       <div class="iq-fb" id="iqFb" hidden></div>
@@ -485,21 +531,49 @@
     const box = $('iqOpts');
     opts.forEach((oi) => { const b = document.createElement('button'); b.className = 'iq-opt'; b.textContent = a.o[oi]; b.addEventListener('click', () => answer(oi, n, a, box)); box.appendChild(b); });
     ov.hidden = false;
+    clearQuizTimer();
+    if (d.time) {
+      const t0 = Date.now(), total = d.time * 1000;
+      quizTimer = setInterval(() => {
+        if (ov.hidden) { clearQuizTimer(); return; }
+        const left = total - (Date.now() - t0);
+        const f = $('iqTimerFill'); if (f) f.style.width = Math.max(0, (left / total) * 100) + '%';
+        if (left <= 0) { clearQuizTimer(); answer(-1, n, a, box); }
+      }, 100);
+    }
   }
   function answer(oi, n, a, box) {
-    const isla = ISLAS[idxOf(curTid)]; const correct = oi === a.c;
-    [...box.children].forEach((ch, k) => { ch.disabled = true; });
-    [...box.children].forEach((ch) => { if (ch.textContent === a.o[a.c]) ch.classList.add('ok'); else if (ch.textContent === a.o[oi] && !correct) ch.classList.add('bad'); });
-    const fb = $('iqFb'); fb.hidden = false; fb.className = 'iq-fb ' + (correct ? 'ok' : 'bad');
+    clearQuizTimer();
+    const isla = ISLAS[idxOf(curTid)];
+    const timeout = oi === -1;
+    const correct = !timeout && oi === a.c;
+    [...box.children].forEach((ch) => { ch.disabled = true; });
+    [...box.children].forEach((ch) => { if (ch.textContent === a.o[a.c]) ch.classList.add('ok'); else if (!timeout && ch.textContent === a.o[oi] && !correct) ch.classList.add('bad'); });
+    const fb = $('iqFb'); if (!fb) return;
+    fb.hidden = false; fb.className = 'iq-fb ' + (correct ? 'ok' : 'bad');
+    let agotado = false;
     if (correct) {
-      G.owned[n] = true; save(); sfxSafe('correct');
+      run().owned[n] = true;
+      if (isComplete(isla)) delete run().fails[isla.id];
+      save(); sfxSafe('correct');
       try { if (typeof S !== 'undefined') { S.stats.mastered = S.stats.mastered || {}; S.stats.mastered[n] = true; } if (typeof touchActivity === 'function') touchActivity(); if (typeof window.save === 'function') window.save(); } catch { /* */ }
-    } else sfxSafe('wrong');
-    fb.innerHTML = `<div class="iq-verdict">${correct ? '✅ ¡Territorio conquistado!' : '❌ No es correcto'}</div>
+    } else {
+      sfxSafe('wrong');
+      const lives = DIFF[G.diff].lives;
+      if (lives != null) {
+        run().fails[isla.id] = (run().fails[isla.id] || 0) + 1; save();
+        agotado = livesLeft(isla) <= 0;
+      }
+    }
+    const veredicto = correct ? '✅ ¡Territorio conquistado!' : timeout ? '⏱️ ¡Tiempo agotado!' : '❌ No es correcto';
+    const vidasTxt = (!correct && DIFF[G.diff].lives != null && !agotado) ? ` · te quedan ${'❤️'.repeat(livesLeft(isla))}` : '';
+    fb.innerHTML = `<div class="iq-verdict">${veredicto}${vidasTxt}</div>
+      ${agotado ? '<p class="iq-why"><b>💔 Sin vidas: la isla se pierde y se reinicia.</b></p>' : ''}
       <p class="iq-why">${a.e}</p>
-      <button id="iqNext" class="primary-btn">${correct ? 'Seguir ➜' : 'Reintentar más tarde'}</button>`;
+      <button id="iqNext" class="primary-btn">${correct ? 'Seguir ➜' : agotado ? 'Reintentar la isla 🔄' : 'Reintentar más tarde'}</button>`;
     $('iqNext').addEventListener('click', () => {
       $('islasQuiz').hidden = true;
+      if (agotado) resetIsla(isla);
       renderTitulo();
       if (correct && isComplete(isla)) islaCompletada(isla);
     });
@@ -538,6 +612,14 @@
   function backToMenu() { $('islas').hidden = true; $('gameMenu').hidden = false; sfxSafe('click'); }
   function startIslas() { $('gameMenu').hidden = true; $('islasQuiz').hidden = true; G = load(); renderDiff(); renderWorld(); $('islas').hidden = false; }
   window.startIslas = startIslas;
+
+  // al girar el móvil o cambiar el tamaño, se recoloca el mapa
+  let resizeT = null;
+  window.addEventListener('resize', () => {
+    const scr = $('islas'); if (!scr || scr.hidden) return;
+    clearTimeout(resizeT);
+    resizeT = setTimeout(() => { if (view === 'titulo') renderTitulo(); else renderWorld(); }, 250);
+  });
 
   document.addEventListener('DOMContentLoaded', () => {
     const back = $('islasBack');
