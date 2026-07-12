@@ -57,6 +57,60 @@
     bar.querySelectorAll('.mem-diff').forEach((b) => b.addEventListener('click', () => { G.diff = b.dataset.d; save(); sfxSafe('click'); renderDiff(); }));
   }
 
+  /* ═══════════════ costas orgánicas (islas de verdad, no rectángulos) ═══════════════ */
+  const mulberry = (seed) => { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+  const seedOf = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+  /* Contorno cerrado suave (Catmull-Rom → Bézier) */
+  function closedSmooth(pts) {
+    const n = pts.length;
+    let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+    for (let i = 0; i < n; i++) {
+      const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+      const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+      const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+      d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+    }
+    return d + ' Z';
+  }
+  /* Silueta de isla: elipse deformada con varias octavas de ruido armónico
+     (periódico → la costa cierra sin costuras), con cabos y bahías. */
+  function islaPts(cx, cy, rx, ry, seed, rough) {
+    const rnd = mulberry(seed);
+    const oct = [];
+    for (let k = 0; k < 4; k++) oct.push({ f: 2 + k + Math.floor(rnd() * 2), a: rough * (1 - k * 0.18) * (0.55 + rnd() * 0.75), p: rnd() * Math.PI * 2 });
+    const pts = [];
+    const n = 44;
+    for (let i = 0; i < n; i++) {
+      const t = (i / n) * Math.PI * 2;
+      let f = 1; for (const o of oct) f += o.a * Math.sin(t * o.f + o.p);
+      pts.push([cx + Math.cos(t) * rx * f, cy + Math.sin(t) * ry * f]);
+    }
+    return pts;
+  }
+  const islaPath = (cx, cy, rx, ry, seed, rough = 0.13) => closedSmooth(islaPts(cx, cy, rx, ry, seed, rough));
+  /* Dibuja una isla completa: sombra, aguas someras, arena y playa. */
+  function drawIsla(parent, cx, cy, rx, ry, seed, color, landFill) {
+    parent.appendChild(el('ellipse', { cx, cy: cy + ry + 10, rx: rx * 0.92, ry: Math.max(10, ry * 0.22), fill: 'rgba(0,0,0,0.25)' }));
+    parent.appendChild(el('path', { d: islaPath(cx, cy, rx * 1.22, ry * 1.26, seed + 7, 0.15), fill: 'rgba(180,225,235,0.14)' }));
+    parent.appendChild(el('path', { d: islaPath(cx, cy, rx * 1.09, ry * 1.11, seed, 0.14), fill: '#e8dcae', opacity: 0.9 }));
+    parent.appendChild(el('path', { d: islaPath(cx, cy, rx, ry, seed, 0.14), fill: landFill, stroke: color, 'stroke-width': 3 }));
+  }
+  /* Vegetación y relieve proporcionales al tamaño de la isla. */
+  function decoraIsla(parent, cx, cy, rx, ry, seed, r) {
+    const rnd = mulberry(seed + 99);
+    const flora = ['🌴', '🌴', '🌲', '⛰️', '🪨', '🌿'];
+    const k = Math.max(1, Math.round(r / 20));
+    for (let i = 0; i < k; i++) {
+      const a = rnd() * Math.PI * 2;
+      const px = cx + Math.cos(a) * rx * (0.62 + rnd() * 0.2);
+      const py = cy + Math.sin(a) * ry * (0.62 + rnd() * 0.2);
+      const fs = Math.max(13, r * (0.24 + rnd() * 0.1));
+      const t = el('text', { x: px.toFixed(0), y: py.toFixed(0), 'text-anchor': 'middle', 'font-size': fs.toFixed(0), opacity: 0.95 });
+      t.textContent = flora[Math.floor(rnd() * flora.length)];
+      parent.appendChild(t);
+    }
+  }
+
   /* ═══════════════ util SVG: retrato del guardián recortado ═══════════════ */
   let clipSeq = 0;
   function portrait(parent, tid, cx, cy, r, color, emblem) {
@@ -110,35 +164,43 @@
 
     ISLAS.forEach((isla, i) => {
       const [x, y] = POS[i]; const unlocked = isUnlocked(i); const complete = isComplete(isla);
-      const g = el('g', { filter: 'url(#ish)', class: 'isl-node' + (unlocked ? ' on' : '') });
+      // tamaño proporcional al número de territorios (√área)
+      const r = 26 + Math.sqrt(isla.arts.length) * 4.2;
+      const rx = r * 1.22, ry = r * 0.9;
+      const seed = seedOf(isla.id);
+      const g = el('g', { class: 'isl-node' + (unlocked ? ' on' : '') });
       if (unlocked) { g.style.cursor = 'pointer'; g.addEventListener('click', () => enterTitulo(isla.id)); }
-      g.appendChild(el('ellipse', { cx: x, cy: y + 34, rx: 62, ry: 20, fill: 'rgba(0,0,0,0.25)' }));
-      g.appendChild(el('circle', { cx: x, cy: y - 4, r: 52, fill: 'url(#iland)', stroke: '#7d6f3f', 'stroke-width': 2, opacity: unlocked ? 1 : 0.5 }));
-      portrait(g, isla.id, x, y - 4, 40, isla.color, isla.emblem);
-      if (!unlocked) { g.appendChild(el('circle', { cx: x, cy: y - 4, r: 44, fill: 'rgba(10,20,32,0.6)' })); const lk = el('text', { x, y: y + 6, 'text-anchor': 'middle', 'font-size': 34 }); lk.textContent = '🔒'; g.appendChild(lk); }
+      if (!unlocked) g.setAttribute('opacity', 0.55);
+      drawIsla(g, x, y - 4, rx, ry, seed, isla.color, 'url(#iland)');
+      decoraIsla(g, x, y - 4, rx, ry, seed, r);
+      const pr = Math.max(26, r * 0.62);
+      portrait(g, isla.id, x, y - 4, pr, isla.color, isla.emblem);
+      if (!unlocked) { g.appendChild(el('circle', { cx: x, cy: y - 4, r: pr + 3, fill: 'rgba(10,20,32,0.6)' })); const lk = el('text', { x, y: y + 6, 'text-anchor': 'middle', 'font-size': pr * 0.8 }); lk.textContent = '🔒'; g.appendChild(lk); }
       // número romano
-      if (isla.roman) { g.appendChild(el('circle', { cx: x + 34, cy: y - 36, r: 15, fill: isla.color, stroke: '#fff', 'stroke-width': 2 })); const rt = el('text', { x: x + 34, y: y - 30, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 900, fill: '#fff' }); rt.textContent = isla.roman; g.appendChild(rt); }
+      if (isla.roman) { const bx = x + rx * 0.72, by = y - 4 - ry * 0.82; g.appendChild(el('circle', { cx: bx, cy: by, r: 15, fill: isla.color, stroke: '#fff', 'stroke-width': 2 })); const rt = el('text', { x: bx, y: by + 5, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 900, fill: '#fff' }); rt.textContent = isla.roman; g.appendChild(rt); }
       // progreso
-      const oc = ownedCount(isla);
-      g.appendChild(el('rect', { x: x - 30, y: y + 26, width: 60, height: 18, rx: 9, fill: '#173547', stroke: complete ? '#3fbf6f' : '#f4e4bd', 'stroke-width': 1.5 }));
-      const pt = el('text', { x, y: y + 39, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: complete ? '#7ee6a4' : '#f4e4bd' }); pt.textContent = complete ? '✓ completa' : `${oc}/${isla.arts.length}`; g.appendChild(pt);
+      const oc = ownedCount(isla); const py = y - 4 + ry + 4;
+      g.appendChild(el('rect', { x: x - 33, y: py, width: 66, height: 18, rx: 9, fill: '#173547', stroke: complete ? '#3fbf6f' : '#f4e4bd', 'stroke-width': 1.5 }));
+      const pt = el('text', { x, y: py + 13, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: complete ? '#7ee6a4' : '#f4e4bd' }); pt.textContent = complete ? '✓ completa' : `${oc}/${isla.arts.length}`; g.appendChild(pt);
       // nombre
       const label = (isla.roman ? isla.roman + '. ' : '') + isla.name;
       const w = Math.max(96, label.length * 7.6);
-      g.appendChild(el('rect', { x: x - w / 2, y: y + 48, width: w, height: 28, rx: 8, fill: '#f0dfb4', stroke: '#7d6f3f', 'stroke-width': 1.2 }));
-      const nm = el('text', { x, y: y + 67, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 800, fill: '#2a1c0c' }); nm.textContent = label; g.appendChild(nm);
-      if (i === 0 && !complete) badge(g, x, y - 72, '#2f9e5f', 'START');
+      g.appendChild(el('rect', { x: x - w / 2, y: py + 22, width: w, height: 28, rx: 8, fill: '#f0dfb4', stroke: '#7d6f3f', 'stroke-width': 1.2 }));
+      const nm = el('text', { x, y: py + 41, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 800, fill: '#2a1c0c' }); nm.textContent = label; g.appendChild(nm);
+      if (i === 0 && !complete) badge(g, x, y - 4 - ry - 34, '#2f9e5f', 'START');
       svg.appendChild(g);
     });
     // FIN: La Unidad
     const [fx, fy] = POS[11]; const won = ISLAS.every(isComplete);
-    const fg = el('g', { filter: 'url(#ish)' });
-    fg.appendChild(el('circle', { cx: fx, cy: fy - 4, r: 52, fill: 'url(#iland)', stroke: '#7d6f3f', 'stroke-width': 2, opacity: won ? 1 : 0.55 }));
-    portrait(fg, FIN.id, fx, fy - 4, 40, FIN.color, FIN.emblem);
-    if (!won) fg.appendChild(el('circle', { cx: fx, cy: fy - 4, r: 44, fill: 'rgba(10,20,32,0.5)' }));
-    badge(fg, fx, fy - 72, '#c0392b', 'FIN 👑');
-    const w = 130; fg.appendChild(el('rect', { x: fx - w / 2, y: fy + 48, width: w, height: 28, rx: 8, fill: '#f0dfb4', stroke: '#7d6f3f', 'stroke-width': 1.2 }));
-    const fn = el('text', { x: fx, y: fy + 67, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 800, fill: '#2a1c0c' }); fn.textContent = 'La Unidad de España'; fg.appendChild(fn);
+    const fr = 44, frx = fr * 1.22, fry = fr * 0.9, fseed = seedOf('unidad');
+    const fg = el('g', won ? {} : { opacity: 0.6 });
+    drawIsla(fg, fx, fy - 4, frx, fry, fseed, FIN.color, 'url(#iland)');
+    decoraIsla(fg, fx, fy - 4, frx, fry, fseed, fr);
+    portrait(fg, FIN.id, fx, fy - 4, 30, FIN.color, FIN.emblem);
+    if (!won) fg.appendChild(el('circle', { cx: fx, cy: fy - 4, r: 33, fill: 'rgba(10,20,32,0.5)' }));
+    badge(fg, fx, fy - 4 - fry - 34, '#c0392b', 'FIN 👑');
+    const w = 150; fg.appendChild(el('rect', { x: fx - w / 2, y: fy - 4 + fry + 8, width: w, height: 28, rx: 8, fill: '#f0dfb4', stroke: '#7d6f3f', 'stroke-width': 1.2 }));
+    const fn = el('text', { x: fx, y: fy - 4 + fry + 27, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 800, fill: '#2a1c0c' }); fn.textContent = 'La Unidad de España'; fg.appendChild(fn);
     svg.appendChild(fg);
 
     stage.appendChild(svg);
@@ -162,7 +224,7 @@
     $('islasProg').textContent = `${isla.roman ? 'Título ' + isla.roman + ' · ' : ''}${isla.name} · ${ownedCount(isla)}/${isla.arts.length}`;
 
     // ── layout: empaquetar sub-islas (capítulos) en filas centradas ──
-    const PAD = 26, CELL = 40, GAP = 46, MAXW = 980, TOP = 150, VBW = 1040;
+    const PAD = 26, CELL = 40, GAP = 78, MAXW = 940, TOP = 196, VBW = 1040;
     const chaps = isla.chapters.map((c) => {
       const cols = Math.max(2, Math.min(6, Math.ceil(Math.sqrt(c.arts.length * 1.5))));
       const rows = Math.ceil(c.arts.length / cols);
@@ -179,10 +241,10 @@
     rowsArr.forEach((r) => {
       let x = (VBW - r.w) / 2, rowH = 0;
       r.items.forEach((ch) => { ch.x = x; ch.y = cy; x += ch.w + GAP; rowH = Math.max(rowH, ch.h); });
-      cy += rowH + 50;
+      cy += rowH + 132;
     });
     const placed = chaps;
-    const VBH = Math.max(430, cy + 6);
+    const VBH = Math.max(470, cy - 60);
 
     const svg = el('svg', { viewBox: `0 0 ${VBW} ${VBH}`, class: 'islas-svg' });
     const defs = el('defs');
@@ -201,22 +263,34 @@
     const bt = el('text', { x: 172, y: 76, 'font-size': 24, 'font-weight': 900, fill: '#fff' }); bt.textContent = `${isla.roman ? 'Título ' + isla.roman + ' · ' : ''}${isla.name}`; svg.appendChild(bt);
     const bs = el('text', { x: 172, y: 98, 'font-size': 13, fill: '#9fb3cc' }); bs.textContent = isComplete(isla) ? '✓ Isla completada — repasa los territorios' : 'Conquista los territorios en orden respondiendo su pregunta'; svg.appendChild(bs);
 
-    // puentes punteados entre capítulos consecutivos
+    // rutas marítimas punteadas entre capítulos consecutivos
     for (let i = 0; i < placed.length - 1; i++) {
       const a = placed[i], b = placed[i + 1];
-      svg.appendChild(el('path', { d: `M ${(a.x + a.w).toFixed(0)} ${(a.y + a.h / 2).toFixed(0)} C ${(a.x + a.w + 20)} ${(a.y + a.h / 2)}, ${(b.x - 20)} ${(b.y + b.h / 2)}, ${b.x} ${(b.y + b.h / 2).toFixed(0)}`, fill: 'none', stroke: '#f4e4bd', 'stroke-width': 3, 'stroke-dasharray': '2 10', 'stroke-linecap': 'round', opacity: 0.7 }));
+      const ax = a.x + a.w + 26, ay = a.y + a.h / 2, bx = b.x - 26, by = b.y + b.h / 2;
+      svg.appendChild(el('path', { d: `M ${ax.toFixed(0)} ${ay.toFixed(0)} C ${(ax + 26)} ${ay}, ${(bx - 26)} ${by}, ${bx.toFixed(0)} ${by.toFixed(0)}`, fill: 'none', stroke: '#f4e4bd', 'stroke-width': 3, 'stroke-dasharray': '2 10', 'stroke-linecap': 'round', opacity: 0.7 }));
     }
 
     // cada capítulo = sub-isla con sus territorios
     placed.forEach((ch) => {
       const g = el('g', { filter: 'url(#ish2)' });
       const multi = isla.chapters.length > 1;
-      g.appendChild(el('ellipse', { cx: ch.x + ch.w / 2, cy: ch.y + ch.h + 6, rx: ch.w / 2, ry: 14, fill: 'rgba(0,0,0,0.22)' }));
-      g.appendChild(el('rect', { x: ch.x, y: ch.y, width: ch.w, height: ch.h, rx: Math.min(ch.w, ch.h) / 2.6, fill: 'url(#iland2)', stroke: isla.color, 'stroke-width': 3 }));
-      // emblema-faro de la isla
-      g.appendChild(el('circle', { cx: ch.x + 20, cy: ch.y + 20, r: 15, fill: '#fff', stroke: isla.color, 'stroke-width': 2.5 }));
-      const lm = el('text', { x: ch.x + 20, y: ch.y + 26, 'text-anchor': 'middle', 'font-size': 16 }); lm.textContent = isla.emblem; g.appendChild(lm);
-      if (multi) { const cn = el('text', { x: ch.x + ch.w / 2, y: ch.y - 8, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 800, fill: '#f0dfb4' }); cn.textContent = ch.c.name; g.appendChild(cn); }
+      // sub-isla con costa orgánica (contiene la retícula de territorios)
+      const ccx = ch.x + ch.w / 2, ccy = ch.y + ch.h / 2;
+      const crx = ch.w / 2 + 30, cry = ch.h / 2 + 26;
+      const cseed = seedOf(isla.id + ':' + ch.c.id);
+      g.appendChild(el('ellipse', { cx: ccx, cy: ccy + cry + 4, rx: crx * 0.9, ry: 12, fill: 'rgba(0,0,0,0.22)' }));
+      g.appendChild(el('path', { d: islaPath(ccx, ccy, crx * 1.16, cry * 1.2, cseed + 7, 0.11), fill: 'rgba(180,225,235,0.13)' }));
+      g.appendChild(el('path', { d: islaPath(ccx, ccy, crx * 1.07, cry * 1.09, cseed, 0.10), fill: '#e8dcae', opacity: 0.9 }));
+      g.appendChild(el('path', { d: islaPath(ccx, ccy, crx, cry, cseed, 0.09), fill: 'url(#iland2)', stroke: isla.color, 'stroke-width': 3 }));
+      // palmera en la playa sur + emblema-faro
+      const pal = el('text', { x: ch.x + ch.w - 4, y: ch.y + ch.h + 14, 'text-anchor': 'middle', 'font-size': 20 }); pal.textContent = '🌴'; g.appendChild(pal);
+      g.appendChild(el('circle', { cx: ch.x + 8, cy: ch.y + 6, r: 15, fill: '#fff', stroke: isla.color, 'stroke-width': 2.5 }));
+      const lm = el('text', { x: ch.x + 8, y: ch.y + 12, 'text-anchor': 'middle', 'font-size': 16 }); lm.textContent = isla.emblem; g.appendChild(lm);
+      if (multi) {
+        const lw = Math.max(90, ch.c.name.length * 7.4);
+        g.appendChild(el('rect', { x: ccx - lw / 2, y: ch.y - cry + ch.h / 2 - 52, width: lw, height: 24, rx: 12, fill: 'rgba(14,28,43,0.85)', stroke: isla.color, 'stroke-width': 1.5 }));
+        const cn = el('text', { x: ccx, y: ch.y - cry + ch.h / 2 - 35, 'text-anchor': 'middle', 'font-size': 12.5, 'font-weight': 800, fill: '#f0dfb4' }); cn.textContent = ch.c.name; g.appendChild(cn);
+      }
       // serpentina de celdas + camino
       const pts = ch.c.arts.map((n, k) => {
         const row = Math.floor(k / ch.cols); let col = k % ch.cols; if (row % 2 === 1) col = ch.cols - 1 - col;
