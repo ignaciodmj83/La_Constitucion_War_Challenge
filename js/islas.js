@@ -111,6 +111,40 @@
     }
   }
 
+  /* ═══════════════ zoom y arrastre (rueda, drag y botones ＋/−/⟳) ═══════════════ */
+  function attachZoom(svg, stage, vbw, vbh) {
+    let vx = 0, vy = 0, vw = vbw, vh = vbh, moved = false;
+    const apply = () => svg.setAttribute('viewBox', `${vx.toFixed(1)} ${vy.toFixed(1)} ${vw.toFixed(1)} ${vh.toFixed(1)}`);
+    const clamp = () => {
+      vw = Math.min(vbw, Math.max(vbw / 5, vw)); vh = vw * vbh / vbw;
+      vx = Math.max(0, Math.min(vbw - vw, vx)); vy = Math.max(0, Math.min(vbh - vh, vy));
+    };
+    const toVB = (e) => { const r = svg.getBoundingClientRect(); return { x: vx + (e.clientX - r.left) / r.width * vw, y: vy + (e.clientY - r.top) / r.height * vh }; };
+    const zoomAt = (fx, fy, f) => { vx = fx - (fx - vx) / f; vy = fy - (fy - vy) / f; vw /= f; vh = vw * vbh / vbw; clamp(); apply(); };
+    svg.addEventListener('wheel', (e) => { e.preventDefault(); const p = toVB(e); zoomAt(p.x, p.y, e.deltaY < 0 ? 1.2 : 1 / 1.2); }, { passive: false });
+    let drag = null;
+    svg.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, vx, vy }; moved = false; try { svg.setPointerCapture(e.pointerId); } catch { /* */ } });
+    svg.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const r = svg.getBoundingClientRect(); const sc = vw / r.width;
+      const dx = (e.clientX - drag.x), dy = (e.clientY - drag.y);
+      if (Math.abs(dx) + Math.abs(dy) > 6) moved = true;
+      vx = drag.vx - dx * sc; vy = drag.vy - dy * sc; clamp(); apply();
+    });
+    const endDrag = () => { drag = null; };
+    svg.addEventListener('pointerup', endDrag); svg.addEventListener('pointercancel', endDrag);
+    // si hubo arrastre, el click que sigue no debe conquistar territorios
+    svg.addEventListener('click', (e) => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+    // botones flotantes
+    const ctl = document.createElement('div'); ctl.className = 'islas-zoomctl';
+    ctl.innerHTML = '<button title="Acercar">＋</button><button title="Alejar">－</button><button title="Ver todo">⟳</button>';
+    const [bIn, bOut, bReset] = ctl.querySelectorAll('button');
+    bIn.addEventListener('click', () => zoomAt(vx + vw / 2, vy + vh / 2, 1.35));
+    bOut.addEventListener('click', () => zoomAt(vx + vw / 2, vy + vh / 2, 1 / 1.35));
+    bReset.addEventListener('click', () => { vx = 0; vy = 0; vw = vbw; vh = vbh; apply(); });
+    stage.appendChild(ctl);
+  }
+
   /* ═══════════════ util SVG: retrato del guardián recortado ═══════════════ */
   let clipSeq = 0;
   function portrait(parent, tid, cx, cy, r, color, emblem) {
@@ -204,6 +238,7 @@
     svg.appendChild(fg);
 
     stage.appendChild(svg);
+    attachZoom(svg, stage, 1200, 720);
     if (won) setTimeout(() => victory(), 300);
   }
   function badge(g, x, y, fill, txt) {
@@ -426,6 +461,7 @@
       svg.appendChild(g);
     });
     stage.appendChild(svg);
+    attachZoom(svg, stage, VBW, VBH);
   }
 
   /* ═══════════════ conquista de un territorio (pregunta) ═══════════════ */
@@ -491,7 +527,7 @@
     ov.innerHTML = `<div class="card islas-end" style="--tc:#c9a13b">
       ${art}<h2>👑 ¡Has unido toda España!</h2>
       <p>Conquistaste los 169 territorios de las 11 islas y alcanzaste <b>La Unidad de España</b>.</p>
-      <button id="ieOk" class="primary-btn big">Volver al menú</button>
+      <button id="ieOk" class="primary-btn big">⬅️ Atrás</button>
     </div>`;
     ov.hidden = false;
     try { if (typeof confetti === 'function') confetti(); } catch { /* */ }

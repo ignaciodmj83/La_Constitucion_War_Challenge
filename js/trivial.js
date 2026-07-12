@@ -284,7 +284,7 @@
       ${human ? unidadArt : `<div class="ts-emoji">🤖</div>`}
       <h2>${human ? '🏆 ¡Alcanzaste La Unidad de España!' : `Ganó ${T.players[winnerIdx].name}`}</h2>
       <p class="ts-score">Completaste ${T.players[0].wedges.size}/11 quesitos.</p>
-      <div class="ts-actions"><button id="tqAgain" class="primary-btn">Otra partida 🎲</button><button id="tqMenu" class="secondary-btn">Volver al menú</button></div></div>`;
+      <div class="ts-actions"><button id="tqAgain" class="primary-btn">Otra partida 🎲</button><button id="tqMenu" class="secondary-btn">⬅️ Atrás</button></div></div>`;
     if (human) { try { if (typeof confetti === 'function') confetti(); } catch { /* */ } }
     $('tqAgain').addEventListener('click', () => { $('trivQuiz').hidden = true; startTrivial(); });
     $('tqMenu').addEventListener('click', backToMenu); setTurn();

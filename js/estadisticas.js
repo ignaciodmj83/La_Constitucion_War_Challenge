@@ -21,12 +21,14 @@
   function mMemoria() { const o = pget('ce78_memoria_v2'); const hi = o.hi || {}; let m = 0; ['facil', 'medio', 'dificil'].forEach((d) => { m = Math.max(m, ((hi[d] || 0) / 169) * WD[d]); }); return m; }
   function mTribunal() { const o = pget('ce78_tribunal_v1'); const b = o.best || {}; const N = o.total || 10; return ((Math.min(b.abogado || 0, N) / N) + (Math.min(b.juez || 0, N) / N)) / 2; }
   function mTrivial() { const o = pget('ce78_trivial_v1'); if (o.bestWedges != null) return Math.min(1, o.bestWedges / 11); return Math.min(1, (o.bestCorrect || 0) / 12); }
+  function mIslas() { const o = pget('ce78_islas_v1'); const owned = Object.keys(o.owned || {}).length; return (owned / 169) * (WD[o.diff] || 0.8); }
 
   const GAMES = [
     { key: 'conquista', name: 'Conquista', emoji: '⚔️', color: '#e0a52e', m: mConquista },
     { key: 'memoria', name: 'Memorión', emoji: '🃏', color: '#4d92e0', m: mMemoria },
     { key: 'tribunal', name: 'Tribunal', emoji: '🏛️', color: '#d24b3e', m: mTribunal },
     { key: 'trivial', name: 'Trivial', emoji: '❓', color: '#2f9e5f', m: mTrivial },
+    { key: 'islas', name: 'Islas', emoji: '🏝️', color: '#2fa3c9', m: mIslas },
   ];
   const dominioGlobal = () => GAMES.reduce((s, g) => s + g.m(), 0) / GAMES.length;
   function freshness() {
@@ -138,6 +140,16 @@
     const o = pget('ce78_trivial_v1');
     return `<div class="st-line"><span>Mejor ronda</span><b>${o.bestCorrect || 0}/12 aciertos</b></div><div class="st-line"><span>Récord de puntos</span><b>${o.best || 0}</b></div>`;
   }
+  function detailIslas() {
+    const o = pget('ce78_islas_v1'); const owned = o.owned || {};
+    const rango = (r) => { const out = []; for (let n = r[0]; n <= r[1]; n++) out.push(n); return out; };
+    const done = (typeof TITULOS !== 'undefined')
+      ? TITULOS.filter((t) => t.islands.flatMap((is) => rango(is.arts)).every((n) => owned[n])).length : 0;
+    const dnames = { facil: '🌱 Fácil', medio: '⚔️ Medio', dificil: '🔥 Difícil' };
+    return `<div class="st-line"><span>🏝️ Islas completadas</span><b>${done}/11</b></div>
+      <div class="st-line"><span>Territorios conquistados</span><b>${Object.keys(owned).length}/169</b></div>
+      <div class="st-line"><span>Dificultad actual</span><b>${dnames[o.diff] || '⚔️ Medio'}</b></div>`;
+  }
 
   function renderStats() {
     const stage = $('statsStage');
@@ -156,7 +168,7 @@
       kpiPct = g.m() * 100; kpiColor = g.color;
       kpiTitle = `Maestría en ${g.name}`;
       kpiSub = 'Solo llega al 100% completando el juego a su máxima dificultad.';
-      const det = filter === 'conquista' ? detailConquista() : filter === 'memoria' ? detailMemoria() : filter === 'tribunal' ? detailTribunal() : detailTrivial();
+      const det = filter === 'conquista' ? detailConquista() : filter === 'memoria' ? detailMemoria() : filter === 'tribunal' ? detailTribunal() : filter === 'islas' ? detailIslas() : detailTrivial();
       detail = `<div class="st-detail">${det}</div>`;
     }
     stage.innerHTML = `

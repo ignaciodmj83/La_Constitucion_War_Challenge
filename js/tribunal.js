@@ -364,7 +364,7 @@
         <p class="ts-score">Has resuelto <b>${T.wins}</b> de <b>${CASOS.length}</b> casos (${pct}%) como ${T.mode === 'abogado' ? 'abogado/a' : 'juez/a'}.</p>
         <div class="ts-actions">
           <button id="tribAgain" class="primary-btn">Otra vista ⚖️</button>
-          <button id="tribToMenu" class="secondary-btn">Volver al menú</button>
+          <button id="tribToMenu" class="secondary-btn">⬅️ Atrás</button>
         </div>
       </div>`;
     if (pct >= 80) { try { if (typeof confetti === 'function') confetti(); } catch { /* */ } }
