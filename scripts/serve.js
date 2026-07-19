@@ -22,8 +22,29 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 
+/* Las funciones de /api (Vercel) también funcionan en local: se montan con
+   un pequeño adaptador estilo Vercel (res.status().json()). */
+function apiShim(res) {
+  res.status = (c) => { res.statusCode = c; return res; };
+  res.json = (o) => { res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.end(JSON.stringify(o)); };
+  return res;
+}
+function serveApi(req, res, urlPath) {
+  const name = urlPath.slice(5).replace(/[^a-z]/g, '');
+  const file = path.join(ROOT, 'api', name + '.js');
+  if (!name || !fs.existsSync(file)) { res.writeHead(404).end('No encontrado'); return; }
+  let body = '';
+  req.on('data', (d) => { body += d; });
+  req.on('end', () => {
+    try { req.body = body ? JSON.parse(body) : {}; } catch { req.body = {}; }
+    apiShim(res);
+    Promise.resolve(require(file)(req, res)).catch(() => { try { res.status(500).json({ error: 'interno' }); } catch { /* */ } });
+  });
+}
+
 http.createServer((req, res) => {
   let urlPath = decodeURIComponent(req.url.split('?')[0]);
+  if (urlPath.startsWith('/api/')) { serveApi(req, res, urlPath); return; }
   if (urlPath === '/') urlPath = '/index.html';
   const filePath = path.join(ROOT, path.normalize(urlPath));
   if (!filePath.startsWith(ROOT)) { res.writeHead(403).end('Forbidden'); return; }

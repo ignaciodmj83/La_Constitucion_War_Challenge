@@ -897,3 +897,7 @@ body {
   #asisPanel { left: 8px; right: 8px; width: auto; bottom: 126px; }
   .asis-msgs { max-height: 36vh; }
 }
+
+/* Cuenta en la nube */
+.cta-sync { flex: 1; display: inline-flex; align-items: center; justify-content: center; font-size: 12.5px;
+  font-weight: 700; color: #7ee6a4; border: 1px dashed rgba(126,230,164,.4); border-radius: 9px; }

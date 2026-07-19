@@ -146,3 +146,30 @@ Se agradecen correcciones de contenido y mejoras. Lee
 Proyecto educativo. El texto de la Constitución (BOE-A-1978-31229) es de dominio
 público; las preguntas, explicaciones y el juego son obra original. **No
 constituye asesoramiento jurídico.** Consulta la [licencia](LICENSE).
+
+## ☁️ Cuenta en la nube (usuarios y partidas en el servidor)
+
+El juego incluye un backend de autenticación y guardado en `api/`
+(funciones serverless de Vercel, sin dependencias): registro e inicio de
+sesión con usuario y contraseña (scrypt + salt), sesiones con token firmado
+(HMAC, 90 días) y las partidas de cada usuario guardadas en una base de
+datos Redis. Con la cuenta en la nube se puede jugar desde cualquier
+dispositivo retomando el progreso.
+
+### Activarlo en Vercel (una sola vez)
+
+1. En el panel de Vercel del proyecto: **Storage → Create Database →
+   Upstash (Redis)** y conéctala al proyecto. Esto crea automáticamente las
+   variables `KV_REST_API_URL` y `KV_REST_API_TOKEN`.
+2. (Recomendado) **Settings → Environment Variables**: añade
+   `SESSION_SECRET` con una cadena aleatoria larga (firma de las sesiones).
+3. **Redeploy**. Comprueba `https://tu-dominio/api/salud`: debe responder
+   `{"ok":true,"listo":true}`.
+
+Cuando el backend está activo, el selector «¿Quién juega?» muestra el
+bloque **☁️ Cuenta en la nube** (Entrar / Crear cuenta) automáticamente.
+Si no lo está (por ejemplo en GitHub Pages, que no ejecuta funciones), el
+juego sigue funcionando igual con los perfiles locales del dispositivo.
+
+Para desarrollo local, `npm run serve` también monta `/api`; apunta las
+variables de entorno a tu Redis (o a un mock) antes de arrancar.

@@ -12,7 +12,7 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const DB_KEY = 'ce78_cuentas_v1';
-  const GAME_KEYS = ['ce78_warchallenge_v3', 'ce78_memoria_v2', 'ce78_tribunal_v1', 'ce78_trivial_v1'];
+  const GAME_KEYS = ['ce78_warchallenge_v3', 'ce78_memoria_v2', 'ce78_tribunal_v1', 'ce78_trivial_v1', 'ce78_islas_v1'];
 
   function loadDB() {
     try { const d = JSON.parse(localStorage.getItem(DB_KEY)); if (d && d.usuarios && d.partidas) return d; } catch { /* */ }
@@ -44,12 +44,43 @@
     return DB.partidas[id];
   }
   /* Vuelca el estado vivo de los juegos en la partida activa del usuario. */
+  const NUBE_UID = 'nube';
+  const esNube = () => DB.sesion === NUBE_UID && typeof NUBE !== 'undefined' && NUBE.sesion();
+  function paqueteNube() {
+    const u = DB.usuarios[NUBE_UID];
+    return { partidas: partidasDe(NUBE_UID), activa: u ? u.activa : null, live: snapshot() };
+  }
   function guardaActiva() {
     const u = user(); if (!u || !u.activa || !DB.partidas[u.activa]) return;
     try { if (typeof save === 'function') save(); } catch { /* */ }
     const p = DB.partidas[u.activa];
     p.data = snapshot(); p.updated = Date.now();
     saveDB();
+    if (esNube()) NUBE.push(paqueteNube());
+  }
+  /* Aplica en este dispositivo los datos de la cuenta en la nube y recarga. */
+  function aplicarNube(nombre, datos) {
+    guardaActiva();
+    for (const pid of Object.keys(DB.partidas)) if (DB.partidas[pid].uid === NUBE_UID) delete DB.partidas[pid];
+    DB.usuarios[NUBE_UID] = { id: NUBE_UID, name: nombre, pin: null, activa: null, created: Date.now(), nube: true };
+    if (datos && Array.isArray(datos.partidas) && datos.partidas.length) {
+      for (const p of datos.partidas) DB.partidas[p.id] = Object.assign({}, p, { uid: NUBE_UID });
+      DB.usuarios[NUBE_UID].activa = datos.activa && DB.partidas[datos.activa] ? datos.activa : datos.partidas[0].id;
+      writeLive(datos.live || DB.partidas[DB.usuarios[NUBE_UID].activa].data);
+    } else {
+      DB.usuarios[NUBE_UID].activa = nuevaPartidaObj(NUBE_UID, null).id;
+      writeLive(null);
+    }
+    DB.sesion = NUBE_UID; saveDB(); location.reload();
+  }
+  function cerrarNube() {
+    guardaActiva();
+    if (typeof NUBE !== 'undefined') { NUBE.pushAhora(paqueteNube()); NUBE.logout(); }
+    let uid = Object.keys(DB.usuarios).find((k) => k !== NUBE_UID);
+    if (!uid) { uid = nextId('u'); DB.usuarios[uid] = { id: uid, name: 'Invitado', pin: null, activa: null, created: Date.now() }; }
+    const u = DB.usuarios[uid];
+    if (!u.activa || !DB.partidas[u.activa]) u.activa = nuevaPartidaObj(uid, null).id;
+    DB.sesion = uid; writeLive(DB.partidas[u.activa].data); saveDB(); location.reload();
   }
 
   /* Primer arranque: se adopta la partida existente bajo un usuario Invitado. */
@@ -128,16 +159,24 @@
           <button class="cta-btn peligro" data-borrar="${p.id}" title="Eliminar partida">🗑️</button>
         </div>
       </div>`).join('');
-    body.innerHTML = `
-      <div class="cta-user">
+    const nube = esNube();
+    const cab = nube
+      ? `<div class="cta-user">
+          <span class="cta-avatar">☁️</span>
+          <div class="cta-u-txt"><b id="ctaName">${esc(u.name)}</b><small>cuenta en la nube · disponible en cualquier dispositivo</small></div>
+        </div>
+        <div class="cta-row"><button id="ctaPrefs" class="cta-btn cta-mitad">⚙️ Preferencias</button>
+          <span class="cta-sync" id="ctaSync">☁️ sincronizada</span></div>`
+      : `<div class="cta-user">
         <span class="cta-avatar">${esc(u.name[0].toUpperCase())}</span>
-        <div class="cta-u-txt"><b id="ctaName">${esc(u.name)}</b><small>${u.pin ? '🔒 con contraseña' : 'sin contraseña'}</small></div>
+        <div class="cta-u-txt"><b id="ctaName">${esc(u.name)}</b><small>${u.pin ? '🔒 con contraseña' : 'perfil local de este dispositivo'}</small></div>
         <button id="ctaEditName" class="cta-btn" title="Editar nombre">✏️</button>
       </div>
       <div class="cta-row">
         <button id="ctaPass" class="cta-btn cta-mitad">🔑 ${u.pin ? 'Cambiar' : 'Poner'} contraseña</button>
         <button id="ctaPrefs" class="cta-btn cta-mitad">⚙️ Preferencias</button>
-      </div>
+      </div>`;
+    body.innerHTML = cab + `
       <h3 class="cta-h">🎮 Mis partidas</h3>
       <div class="cta-partidas">${lista}</div>
       <button id="ctaNueva" class="secondary-btn cta-full">➕ Nueva partida</button>
@@ -148,10 +187,14 @@
     body.querySelectorAll('[data-abrir]').forEach((b) => b.addEventListener('click', () => abrirPartida(b.dataset.abrir)));
     body.querySelectorAll('[data-borrar]').forEach((b) => b.addEventListener('click', () => eliminarPartida(b.dataset.borrar)));
     $('ctaNueva').addEventListener('click', nuevaPartida);
-    $('ctaEditName').addEventListener('click', editarNombre);
-    $('ctaPass').addEventListener('click', () => { vista = 'pass'; renderPass(); });
+    if ($('ctaEditName')) $('ctaEditName').addEventListener('click', editarNombre);
+    if ($('ctaPass')) $('ctaPass').addEventListener('click', () => { vista = 'pass'; renderPass(); });
     $('ctaPrefs').addEventListener('click', () => { if (typeof renderSettings === 'function') { renderSettings(); $('settingsModal').hidden = false; } });
-    $('ctaSalir').addEventListener('click', () => { $('cuentaModal').hidden = true; renderLogin(); $('loginModal').hidden = false; });
+    if (nube) { const b = $('ctaSalir'); if (b) b.textContent = '🚪 Cerrar sesión de la nube'; }
+    $('ctaSalir').addEventListener('click', () => {
+      if (esNube()) { if (confirm('¿Cerrar la sesión de la nube en este dispositivo? Tu progreso queda guardado en el servidor.')) cerrarNube(); return; }
+      $('cuentaModal').hidden = true; renderLogin(); $('loginModal').hidden = false;
+    });
     $('ctaAyuda').addEventListener('click', () => { $('introModal').hidden = false; });
   }
 
@@ -199,8 +242,22 @@
   /* ── UI: Salir / ¿Quién juega? (selector limpio, solo al cambiar de usuario) ── */
   function renderLogin() {
     const body = $('loginBody'); if (!body) return;
-    const usuarios = Object.values(DB.usuarios).sort((a, b) => a.created - b.created);
+    const usuarios = Object.values(DB.usuarios).filter((x) => x.id !== NUBE_UID).sort((a, b) => a.created - b.created);
     body.innerHTML = `
+      <div id="loginNube" hidden>
+        <h3 class="cta-h">☁️ Cuenta en la nube</h3>
+        <p class="login-sub">Con tu cuenta juegas desde cualquier dispositivo y tu progreso se guarda en el servidor.</p>
+        <div class="cta-form">
+          <label>Usuario<input id="nubeNombre" type="text" maxlength="20" autocomplete="username" placeholder="Tu nombre de usuario"></label>
+          <label>Contraseña<input id="nubePass" type="password" autocomplete="current-password" placeholder="mínimo 4 caracteres"></label>
+          <div id="nubeErr" class="cta-err" hidden></div>
+          <div class="cta-row">
+            <button id="nubeEntrar" class="primary-btn cta-mitad">Entrar</button>
+            <button id="nubeCrear" class="cta-btn cta-mitad">Crear cuenta</button>
+          </div>
+        </div>
+        <h3 class="cta-h">📱 O sigue en este dispositivo</h3>
+      </div>
       <p class="login-sub">Elige tu usuario para continuar tu progreso, o crea uno nuevo.</p>
       <div class="login-users">${usuarios.map((x) => `
         <button class="login-user ${x.id === DB.sesion ? 'sel' : ''}" data-uid="${x.id}">
@@ -243,12 +300,31 @@
       const nombre = $('loginNombre').value.trim(); if (!nombre) { $('loginNombre').focus(); return; }
       crearUsuario(nombre, $('loginNuevoPin').value.trim() || null);
     });
+    // cuenta en la nube (solo si el backend está desplegado y con BBDD)
+    if (typeof NUBE !== 'undefined') NUBE.disponible().then((ok) => {
+      if (!ok) return;
+      $('loginNube').hidden = false;
+      const err = (m) => { const e = $('nubeErr'); e.textContent = m; e.hidden = false; };
+      const accion = async (crear) => {
+        const nombre = $('nubeNombre').value.trim(), pass = $('nubePass').value;
+        if (!nombre) { $('nubeNombre').focus(); return; }
+        if (pass.length < 4) return err('La contraseña debe tener al menos 4 caracteres.');
+        try {
+          const datos = crear ? await NUBE.registro(nombre, pass) : await NUBE.login(nombre, pass);
+          aplicarNube(NUBE.sesion().nombre, datos);
+        } catch (e2) { err(e2.message); }
+      };
+      $('nubeEntrar').addEventListener('click', () => accion(false));
+      $('nubeCrear').addEventListener('click', () => accion(true));
+      $('nubePass').addEventListener('keydown', (e2) => { if (e2.key === 'Enter') accion(false); });
+    });
   }
 
   /* ── guardado periódico de la partida activa ── */
   setInterval(guardaActiva, 30000);
-  window.addEventListener('pagehide', guardaActiva);
-  window.addEventListener('beforeunload', guardaActiva);
+  const alSalir = () => { guardaActiva(); if (esNube()) NUBE.pushAhora(paqueteNube()); };
+  window.addEventListener('pagehide', alSalir);
+  window.addEventListener('beforeunload', alSalir);
 
   document.addEventListener('DOMContentLoaded', () => {
     pintaMenu();
