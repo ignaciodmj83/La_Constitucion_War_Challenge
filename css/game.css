@@ -396,6 +396,11 @@ body {
 /* Acceso a la cuenta en la nube */
 .login-sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
 
+/* Cabeceras de sección en Estadísticas (partida vs dedicación personal) */
+.stats-sec { margin: 20px 2px 10px; font-size: 15px; font-weight: 800; color: var(--gold); }
+.stats-sec:first-child { margin-top: 4px; }
+.stats-sec small { display: block; color: var(--muted); font-weight: 600; font-size: 12px; margin-top: 2px; }
+
 /* ── Estadísticas ── */
 .stats-stage { max-width: 640px; margin: 0 auto; padding: 14px 16px 48px; display: flex; flex-direction: column; gap: 12px; }
 .stf-chip { border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 999px; padding: 8px 12px;

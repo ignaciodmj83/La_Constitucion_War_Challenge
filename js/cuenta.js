@@ -47,8 +47,17 @@
   }
   const paquete = () => ({ partidas: ST.partidas, activa: ST.activa });
 
+  /* Mientras hay un cambio de partida/sesión en marcha (hasta la recarga),
+     queda PROHIBIDO volver a guardar: la S en memoria de los juegos aún es
+     de la partida anterior, y un save() tardío (intervalo, unload) la
+     volcaría al localStorage recién limpiado, contaminando la partida nueva. */
+  let congelado = false;
+  function prepararCambio() {
+    congelado = true;
+    try { window.save = function () { /* anulado hasta recargar */ }; } catch { /* */ }
+  }
   function guardaActiva() {
-    if (!ST) return;
+    if (!ST || congelado) return;
     try { if (typeof save === 'function') save(); } catch { /* */ }
     const p = activa(); if (!p) return;
     p.data = snapshot(); p.updated = Date.now();
@@ -73,11 +82,13 @@
   async function iniciar(nombre, pass, crear) {
     const previaLocal = crear ? snapshot() : null; // al crear cuenta, rescata el progreso ya jugado en este dispositivo
     const datos = crear ? await NUBE.registro(nombre, pass) : await NUBE.login(nombre, pass);
+    prepararCambio(); // los datos restaurados no deben ser pisados por un save() tardío
     aplicarDatos(NUBE.sesion().nombre, datos, previaLocal);
     location.reload();
   }
   async function cerrarSesion() {
     guardaActiva();
+    prepararCambio();
     try { await NUBE.subir(paquete()); } catch { /* */ }
     NUBE.logout();
     localStorage.removeItem(CACHE_KEY);
@@ -91,6 +102,7 @@
      recargásemos con la subida aún en vuelo, la comprobación del arranque
      podría leer datos viejos del servidor y deshacer el cambio. */
   async function subirYRecargar() {
+    prepararCambio();
     try { await NUBE.subir(paquete()); } catch { /* sin conexión: seguimos con lo local */ }
     location.reload();
   }
@@ -227,7 +239,7 @@
     if (datos) {
       const nuevo = JSON.stringify({ partidas: datos.partidas || null, activa: datos.activa || null });
       const actual = ST ? JSON.stringify({ partidas: ST.partidas, activa: ST.activa }) : null;
-      if (nuevo !== actual) { aplicarDatos(NUBE.sesion().nombre, datos); location.reload(); return; }
+      if (nuevo !== actual) { prepararCambio(); aplicarDatos(NUBE.sesion().nombre, datos); location.reload(); return; }
     } else if (!ST) {
       aplicarDatos(NUBE.sesion().nombre, null);
     } else {
@@ -257,5 +269,7 @@
     user: () => (ST ? { name: ST.nombre } : null),
     guardaActiva,
     todasLasPartidas: () => (ST ? ST.partidas : []),
+    partidaActivaId: () => (ST ? ST.activa : null),
+    partidaActivaNombre: () => { const p = ST && activa(); return p ? p.name : ''; },
   };
 })();
