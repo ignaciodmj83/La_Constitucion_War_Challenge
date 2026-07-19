@@ -393,22 +393,8 @@ body {
 .cta-form .cta-row { margin-top: 2px; }
 .cta-err { color: var(--danger); font-size: 12.5px; font-weight: 700; }
 
-/* Salir / ¿Quién juega? (selector) */
+/* Acceso a la cuenta en la nube */
 .login-sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
-.login-users { display: flex; flex-direction: column; gap: 8px; }
-.login-user { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line);
-  border-radius: 11px; background: var(--panel2); color: var(--text); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; text-align: left; }
-.login-user:hover, .login-user.sel { border-color: var(--gold); }
-.login-u-name { flex: 1; min-width: 0; } .login-u-name small { color: var(--muted); font-weight: 600; }
-.login-u-end { flex: none; color: var(--muted); font-size: 15px; }
-.login-pinwrap { margin-top: 12px; padding: 12px; border: 1px solid var(--gold); border-radius: 11px; background: var(--panel2); }
-.login-pin-for { display: block; font-size: 12.5px; font-weight: 700; color: var(--gold); margin-bottom: 8px; }
-.login-pin-row { display: flex; gap: 8px; }
-.login-pin-row input { flex: 1; min-width: 0; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line);
-  background: var(--bg2); color: var(--text); font: inherit; }
-.login-pin-row input:focus { outline: none; border-color: var(--gold); }
-.login-pinwrap .cta-err { margin-top: 8px; }
-#loginNuevo { margin-top: 12px; }
 
 /* ── Estadísticas ── */
 .stats-stage { max-width: 640px; margin: 0 auto; padding: 14px 16px 48px; display: flex; flex-direction: column; gap: 12px; }

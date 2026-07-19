@@ -52,6 +52,13 @@
 
   async function cargar() { return (await llama('datos')).datos; }
 
+  /* subida bloqueante: hay que esperarla antes de recargar la página, para
+     que la siguiente carga no lea datos del servidor aún desactualizados. */
+  async function subir(datos) {
+    if (!sesion()) return;
+    await llama('datos', { method: 'POST', body: JSON.stringify({ datos }) });
+  }
+
   /* autoguardado acumulado: como mucho una subida cada 10 s */
   let pendiente = null, timer = null, ultimo = 0, estado = 'inactivo';
   function push(datos) {
@@ -66,7 +73,7 @@
       catch { estado = 'error'; }
     }, espera);
   }
-  /* subida inmediata (al salir de la página) */
+  /* subida inmediata sin esperar respuesta (al salir de la página) */
   function pushAhora(datos) {
     if (!sesion()) return;
     try {
@@ -78,5 +85,5 @@
     } catch { /* */ }
   }
 
-  window.NUBE = { disponible, sesion, registro, login, logout, cargar, push, pushAhora, estado: () => estado };
+  window.NUBE = { disponible, sesion, registro, login, logout, cargar, subir, push, pushAhora, estado: () => estado };
 })();

@@ -298,6 +298,6 @@
   });
   const mqClose = $('memQuiz').querySelector('.card-close');
   if (mqClose) mqClose.addEventListener('click', () => { $('memQuiz').hidden = true; });
-
-  showMenu();
+  // El menú se muestra solo tras autenticarse (lo controla cuenta.js): no
+  // se fuerza aquí, para no saltarse la puerta de acceso a la cuenta.
 })();

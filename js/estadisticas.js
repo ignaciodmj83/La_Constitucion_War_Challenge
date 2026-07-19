@@ -1,44 +1,102 @@
 /* =========================================================================
    Estadísticas unificadas (accesibles desde el menú principal).
+   Se agregan SIEMPRE por cuenta de usuario: se combinan los datos de TODAS
+   las partidas guardadas en la cuenta en la nube (no solo la que está
+   activa ahora mismo), tomando en cada métrica lo mejor conseguido en
+   cualquiera de ellas.
    Tres KPI para el opositor:
      1) DOMINIO — lo bien que te sabes la Constitución. Media de tu maestría en los 5 juegos; cada juego solo llega a 1.0 a su máxima dificultad, así
         que el 100% exige ser maestro en los 4 al máximo. Filtrable por juego.
      2) FRESCURA — lo reciente de esa valoración (decae con los días sin jugar).
      3) ESFUERZO — tu tiempo de estudio en el tiempo (curva).
-   Lee datos de todos los juegos (S de game.js + localStorage de cada juego).
    ========================================================================= */
 'use strict';
 (function () {
   const $ = (id) => document.getElementById(id);
   const sfxSafe = (k) => { try { if (typeof sfx !== 'undefined' && sfx[k]) sfx[k](); } catch { /* */ } };
   const pget = (k) => { try { return JSON.parse(localStorage.getItem(k)) || {}; } catch { return {}; } };
-  const Sstats = () => (typeof S !== 'undefined' && S.stats) ? S.stats : {};
   const WD = { facil: 0.6, normal: 0.8, medio: 0.8, dificil: 1.0 };
 
+  /* ── datos agregados de TODAS las partidas de la cuenta ── */
+  function mergeMax(dst, src) { for (const k of Object.keys(src || {})) dst[k] = Math.max(dst[k] || 0, src[k] || 0); }
+  function mergeMin(dst, src) { for (const k of Object.keys(src || {})) { const v = src[k]; if (v == null) continue; dst[k] = dst[k] == null ? v : Math.min(dst[k], v); } }
+  function mergeSum(dst, src) { for (const k of Object.keys(src || {})) dst[k] = (dst[k] || 0) + (src[k] || 0); }
+
+  function crudosDe(clave) {
+    const out = [];
+    out.push(clave === 'ce78_warchallenge_v3' && typeof S !== 'undefined' ? S : pget(clave));
+    try {
+      const partidas = (typeof CUENTA !== 'undefined' && CUENTA.todasLasPartidas) ? CUENTA.todasLasPartidas() : [];
+      for (const p of partidas) {
+        const raw = p && p.data && p.data[clave];
+        if (!raw) continue;
+        try { out.push(JSON.parse(raw)); } catch { /* */ }
+      }
+    } catch { /* */ }
+    return out;
+  }
+
+  function agregar() {
+    const conq = { mastered: {}, hiConq: {}, best: {}, days: {}, lastActive: 0 };
+    for (const o of crudosDe('ce78_warchallenge_v3')) {
+      const st = (o && o.stats) || {};
+      Object.assign(conq.mastered, st.mastered || {});
+      mergeMax(conq.hiConq, st.hiConq); mergeMin(conq.best, st.best); mergeSum(conq.days, st.days);
+      conq.lastActive = Math.max(conq.lastActive, st.lastActive || 0);
+    }
+    const mem = { hi: {} };
+    for (const o of crudosDe('ce78_memoria_v2')) mergeMax(mem.hi, (o || {}).hi);
+    const trib = { total: 10, bestD: {} };
+    for (const o of crudosDe('ce78_tribunal_v1')) {
+      if (o && o.total) trib.total = o.total;
+      const bd = (o && o.bestD) || (o && o.best ? { medio: o.best } : {});
+      for (const d of Object.keys(bd || {})) {
+        const b = bd[d] || {}; const t = trib.bestD[d] || (trib.bestD[d] = { abogado: 0, juez: 0 });
+        t.abogado = Math.max(t.abogado, b.abogado || 0); t.juez = Math.max(t.juez, b.juez || 0);
+      }
+    }
+    const triv = { perDiff: {} };
+    for (const o of crudosDe('ce78_trivial_v1')) {
+      const pd = (o && o.perDiff) || (o && o.bestWedges != null ? { medio: { bestWedges: o.bestWedges, wins: o.wins || 0 } } : {});
+      for (const d of Object.keys(pd || {})) {
+        const r = pd[d] || {}; const t = triv.perDiff[d] || (triv.perDiff[d] = { bestWedges: 0, wins: 0 });
+        t.bestWedges = Math.max(t.bestWedges, r.bestWedges || 0); t.wins += r.wins || 0;
+      }
+    }
+    const isl = { runs: {} };
+    for (const o of crudosDe('ce78_islas_v1')) {
+      const runs = (o && o.runs) || (o && o.owned ? { medio: { owned: o.owned } } : {});
+      for (const d of Object.keys(runs || {})) {
+        const own = isl.runs[d] || (isl.runs[d] = { owned: {} });
+        Object.assign(own.owned, (runs[d] || {}).owned || {});
+      }
+    }
+    return { conq, mem, trib, triv, isl };
+  }
+
+  let AGG = { conq: { mastered: {}, hiConq: {}, best: {}, days: {}, lastActive: 0 }, mem: { hi: {} }, trib: { total: 10, bestD: {} }, triv: { perDiff: {} }, isl: { runs: {} } };
+
   /* ── maestría por juego (0..1); 1.0 solo a máxima dificultad ── */
-  function mConquista() { const hi = Sstats().hiConq || {}; let m = 0; ['facil', 'normal', 'dificil'].forEach((d) => { m = Math.max(m, ((hi[d] || 0) / 169) * WD[d]); }); return m; }
-  function mMemoria() { const o = pget('ce78_memoria_v2'); const hi = o.hi || {}; let m = 0; ['facil', 'medio', 'dificil'].forEach((d) => { m = Math.max(m, ((hi[d] || 0) / 169) * WD[d]); }); return m; }
+  function mConquista() { const hi = AGG.conq.hiConq || {}; let m = 0; ['facil', 'normal', 'dificil'].forEach((d) => { m = Math.max(m, ((hi[d] || 0) / 169) * WD[d]); }); return m; }
+  function mMemoria() { const hi = AGG.mem.hi || {}; let m = 0; ['facil', 'medio', 'dificil'].forEach((d) => { m = Math.max(m, ((hi[d] || 0) / 169) * WD[d]); }); return m; }
   function mTribunal() {
-    const o = pget('ce78_tribunal_v1'); const N = o.total || 10; let m = 0;
+    const N = AGG.trib.total || 10; let m = 0;
     const prog = (b) => ((Math.min(b.abogado || 0, N) / N) + (Math.min(b.juez || 0, N) / N)) / 2;
-    if (o.bestD) for (const d of Object.keys(o.bestD)) m = Math.max(m, prog(o.bestD[d]) * (WD[d] || 0.8));
-    else if (o.best) m = prog(o.best) * 0.8; // datos antiguos sin dificultad: tope Medio
+    for (const d of Object.keys(AGG.trib.bestD || {})) m = Math.max(m, prog(AGG.trib.bestD[d]) * (WD[d] || 0.8));
     return m;
   }
   function mTrivial() {
-    const o = pget('ce78_trivial_v1'); let m = 0;
-    const pd = o.perDiff || (o.bestWedges != null ? { medio: { bestWedges: o.bestWedges, wins: o.wins || 0 } } : {});
-    for (const d of Object.keys(pd)) {
-      const r = pd[d] || {};
+    let m = 0;
+    for (const d of Object.keys(AGG.triv.perDiff || {})) {
+      const r = AGG.triv.perDiff[d];
       const prog = (r.wins || 0) > 0 ? 1 : Math.min(1, (r.bestWedges || 0) / 11) * 0.9; // solo GANAR da el 100% del nivel
       m = Math.max(m, prog * (WD[d] || 0.8));
     }
     return m;
   }
   function mIslas() {
-    const o = pget('ce78_islas_v1'); let m = 0;
-    const runs = o.runs || (o.owned ? { [WD[o.diff] ? o.diff : 'medio']: { owned: o.owned } } : {});
-    for (const d of Object.keys(runs)) m = Math.max(m, (Object.keys((runs[d] || {}).owned || {}).length / 169) * (WD[d] || 0.8));
+    let m = 0;
+    for (const d of Object.keys(AGG.isl.runs || {})) m = Math.max(m, (Object.keys((AGG.isl.runs[d] || {}).owned || {}).length / 169) * (WD[d] || 0.8));
     return m;
   }
 
@@ -51,7 +109,7 @@
   ];
   const dominioGlobal = () => GAMES.reduce((s, g) => s + g.m(), 0) / GAMES.length;
   function freshness() {
-    const la = Sstats().lastActive || 0;
+    const la = AGG.conq.lastActive || 0;
     if (!la) return { pct: 0, days: null };
     const days = (Date.now() - la) / 86400000;
     return { pct: 100 * Math.pow(0.5, days / 15), days };
@@ -68,7 +126,7 @@
 
   /* ── gráfico de esfuerzo (curva suave de minutos/día) ── */
   function lastDays(n) {
-    const days = Sstats().days || {}; const out = []; const base = new Date();
+    const days = AGG.conq.days || {}; const out = []; const base = new Date();
     for (let i = n - 1; i >= 0; i--) {
       const d = new Date(base); d.setDate(base.getDate() - i);
       const k = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
@@ -142,28 +200,27 @@
     bar2.querySelectorAll('.stf-chip').forEach((b) => b.addEventListener('click', () => { filter = b.dataset.f; sfxSafe('click'); renderFilter(); renderStats(); }));
   }
   function detailConquista() {
-    const hi = Sstats().hiConq || {}, best = Sstats().best || {};
+    const hi = AGG.conq.hiConq || {}, best = AGG.conq.best || {};
     const row = (d, nm) => `<div class="st-line"><span>${nm}</span><b>${hi[d] || 0}/169${best[d] != null ? ' · récord tiempo' : ''}</b></div>`;
     return row('facil', '🌱 Fácil') + row('normal', '⚔️ Normal') + row('dificil', '🔥 Difícil');
   }
   function detailMemoria() {
-    const hi = pget('ce78_memoria_v2').hi || {};
+    const hi = AGG.mem.hi || {};
     const row = (d, nm) => `<div class="st-line"><span>${nm}</span><b>${hi[d] || 0}/169 descubiertos</b></div>`;
     return row('facil', '🌱 Fácil') + row('medio', '⚔️ Medio') + row('dificil', '🔥 Difícil');
   }
   function detailTribunal() {
-    const o = pget('ce78_tribunal_v1'); const N = o.total || 10; const bd = o.bestD || {};
+    const N = AGG.trib.total || 10; const bd = AGG.trib.bestD || {};
     const fila = (d, nm) => { const b = bd[d] || {}; return `<div class="st-line"><span>${nm}</span><b>⚖️ ${b.abogado || 0}/${N} · 👨‍⚖️ ${b.juez || 0}/${N}</b></div>`; };
     return fila('facil', '🌱 Fácil') + fila('medio', '⚔️ Medio') + fila('dificil', '🔥 Difícil');
   }
   function detailTrivial() {
-    const o = pget('ce78_trivial_v1'); const pd = o.perDiff || {};
+    const pd = AGG.triv.perDiff || {};
     const fila = (d, nm) => { const r = pd[d] || {}; return `<div class="st-line"><span>${nm}</span><b>⭐ ${r.bestWedges || 0}/11 · 🏆 ${r.wins || 0} victoria(s)</b></div>`; };
     return fila('facil', '🌱 Fácil') + fila('medio', '⚔️ Medio') + fila('dificil', '🔥 Difícil');
   }
   function detailIslas() {
-    const o = pget('ce78_islas_v1');
-    const runs = o.runs || (o.owned ? { medio: { owned: o.owned } } : {});
+    const runs = AGG.isl.runs || {};
     const rango = (r) => { const out = []; for (let n = r[0]; n <= r[1]; n++) out.push(n); return out; };
     const fila = (d, nm) => {
       const owned = (runs[d] || {}).owned || {};
@@ -175,22 +232,23 @@
   }
 
   function renderStats() {
+    AGG = agregar();
     const stage = $('statsStage');
     const fr = freshness();
     const ef = effortChart();
-    const mastered = Object.keys(Sstats().mastered || {}).length;
+    const mastered = Object.keys(AGG.conq.mastered || {}).length;
     let kpiPct, kpiColor, kpiTitle, kpiSub, detail = '';
     if (filter === 'all') {
       kpiPct = dominioGlobal() * 100; kpiColor = 'var(--gold)';
       kpiTitle = 'Dominio de la Constitución';
-      kpiSub = 'Media de tu maestría en los 5 juegos. El 100% solo se alcanza GANANDO los 5 en su dificultad máxima.';
+      kpiSub = 'Media de tu maestría en los 5 juegos, sumando todas tus partidas. El 100% solo se alcanza GANANDO los 5 en su dificultad máxima.';
       detail = `<div class="st-breakdown">${GAMES.map((g) => `
         <div class="st-game"><div class="st-game-head"><span>${g.emoji} ${g.name}</span><b>${Math.round(g.m() * 100)}%</b></div>${bar(g.m() * 100, g.color)}</div>`).join('')}</div>`;
     } else {
       const g = GAMES.find((x) => x.key === filter);
       kpiPct = g.m() * 100; kpiColor = g.color;
       kpiTitle = `Maestría en ${g.name}`;
-      kpiSub = 'Cada dificultad es una jugada distinta; el 100% exige ganar en Difícil.';
+      kpiSub = 'Cada dificultad es una jugada distinta; el 100% exige ganar en Difícil. Se cuenta lo mejor de todas tus partidas.';
       const det = filter === 'conquista' ? detailConquista() : filter === 'memoria' ? detailMemoria() : filter === 'tribunal' ? detailTribunal() : filter === 'islas' ? detailIslas() : detailTrivial();
       detail = `<div class="st-detail">${det}</div>`;
     }
